@@ -1,0 +1,32 @@
+push button 1 sec > turns on
+check battery > if low, blink
+read saved animation
+starts animation
+push button 3 sec > turns off (goes to sleep)
+
+while sleeping > wake up every hour to check battery
+	if batVoltage <=3V > blink red 3 times.
+
+when powered on, if pushed button 2 sec, turn on wifi server for config, blink blue 3 times
+double click  save current anim
+when saving config, blink green 3 times
+indicate wifi is off after config with purple 3 times
+
+LED animations:
+
+solid(r1, g1, b1, r2, g2, b2)
+solid_pulsing (r1, g1, b1, r2, g2, b2, t) t=interval
+rainbow(t) t = interval between colors
+
+
+preferences{
+  ssid = preferences.getString("ssid", "DoggyLights");
+  password = preferences.getString("password", "password123");
+  anim = preferences.getInt("anim", 1);
+  red1 = preferences.getChar("red1", 255);
+  grn1 = preferences.getChar("grn1", 0);
+  blu1 = preferences.getChar("blu1", 0);
+  red2 = preferences.getChar("red2", 255);
+  grn2 = preferences.getChar("grn2", 0);
+  blu2 = preferences.getChar("blu2", 0);
+}

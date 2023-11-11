@@ -1,0 +1,42 @@
+15 Builtin LED effects with more in customization options.
+
+Power: Rechargable 370mAh 3.7V Li-Po battery
+Connections: USB 2.0(Type C), 2.4GHz WiFi AP
+2 RGB LEDs
+Ingress protection rating IP5(2-4) (unmodified box = IP54)
+https://clarionuk.com/resources/ip-ratings/
+Operating temperature range: -10 °C to 40 °C
+Weight: 20g
+Dimensions 50 x 25 x 15 mm
+Enclosure material: ABS Plastic
+
+Network settings:
+SSID: DogLights
+Pass: -
+Address: doglights.local or 192.168.4.1
+
+
+Power consumption:
+ 
+Sleep 30 uA
+WiFi ON 85mA
+WiFi Burst 170mA
+WiFi Send page 100mA
+
+RED static: 32mA
+GREEN static: 27mA
+BLUE static: 27mA
+WHITE static: 40mA
+
+RED pulsing: 15-22mA
+GREEN pulsing: 15-18mA
+BLUE pulsing: 15-18mA
+WHITE pulsing: 15-30mA
+
+FLIP FLOP 25mA
+
+
+
+Pricing:
+
+Case: 3.00$

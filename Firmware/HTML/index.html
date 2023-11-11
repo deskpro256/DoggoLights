@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>DoggyLights🐶🌈</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" >
+    <style>
+      body {
+      font-family: Trebuchet MS; 
+      color: #E7E8EB; 
+      background-color: #1B1B1B;}
+      /* Style the tab */
+      .tab {
+      overflow: hidden;
+      border: 1px solid #eee;
+      color: #363636;
+      background-color: #121212;
+      }
+      /* Style the buttons inside the tab */
+      .tab button {
+      background-color: inherit;
+      color: #eee; 
+      float: left;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      width: 50%;
+      padding: 14px;
+      transition: 0.3s;
+      font-size: 17px;
+      }
+      /* Change background color of buttons on hover */
+      .tab button:hover {
+      background-color: #3d3d3d;
+      color: #eee; 
+      }
+      /* Create an active/current tablink class */
+      .tab button.active {
+      background-color: #282828;
+      color: #eee; 
+      }
+      /* Style the tab content */
+      .tabcontent {
+      display: none;
+      padding: 6px 12px;
+      border: 1px solid #ccc;
+      border-top: none;
+      }
+      .spectrum {
+      display: block;
+      width: 200px;
+      height: 30px;
+      margin: 0 0 -3px 7px;
+      background: -webkit-linear-gradient(left, hsl(0, 100%, 50%), hsl(60, 100%, 50%), hsl(120, 100%, 50%), hsl(180, 100%, 50%), hsl(240, 100%, 50%), hsl(300, 100%, 50%), hsl(360, 100%, 50%)  100%);
+      }
+      input[type=range] {
+      width: 210px;
+      margin-top: -5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Dog light configurator</h2>
+    <div class="tab">
+      <button class="tablinks" onclick="openTab(event, 'Lights')" id="defaultOpen">Lights</button>
+      <button class="tablinks" onclick="openTab(event, 'Device')">Device</button>
+    </div>
+    <div id="Lights" class="tabcontent">
+      <p>Configure your lights.</p>
+      <canvas id="myCanvas" width="250" height="150" ></canvas>
+      <form action="/get">
+        <br>
+		<label for="effect">Effect:</label>
+		<select id="effect" name="effect">
+			<option value="static">Static</option>
+			<option value="pulsing">Pulsing</option>
+			<option value="flipflop">FlipFlop</option>
+			<option value="rainbow">Rainbow</option>
+		</select>
+        <br>
+        <br>
+		<label for="interval">Interval:</label>
+		<select id="interval" name="interval">
+			<option value="50">50ms</option>
+			<option value="100">100ms</option>
+			<option value="200">200ms</option>
+			<option value="300">300ms</option>
+		</select>
+        <br>
+        <p>LED 1 Color:</p>
+        <span class="spectrum"></span>
+        <input id="colorInput1" type="range" min="0" max="360" step="1" onpointerup=myFunc()>
+        <br>
+        <p>LED 2 Color:</p>
+        <span class="spectrum"></span>
+        <input id="colorInput2" type="range" min="0" max="360" step="1" onpointerup=myFunc()>
+        <br>
+        <input type="submit" value="Save">
+      </form>
+      <script>
+        myFunc();
+        
+        function myFunc(){
+        var color1 = document.getElementById("colorInput1").value;
+        var color2 = document.getElementById("colorInput2").value;
+        const c = document.getElementById("myCanvas");
+        const ctx = c.getContext("2d");
+		
+		c.width = c.width;
+		
+        ctx.fillStyle = '#333';
+        ctx.fillRect(20, 20, 200, 100);  // Case
+        ctx.rect(20, 20, 200, 100);
+        ctx.stroke();
+		
+		ctx.shadowBlur=50;
+        ctx.fillStyle = 'hsla('+color1+',100%, 50%, 1.0)';
+		ctx.shadowColor='hsla('+color1+',100%, 50%, 0.8)';
+        ctx.fillRect(50, 50, 40, 40);  // LED1
+        
+		ctx.shadowBlur=50;
+        ctx.fillStyle = 'hsla('+color2+',100%, 50%, 1.0)';
+		ctx.shadowColor='hsla('+color2+',100%, 50%, 0.8)';
+        ctx.fillRect(150, 50, 40, 40);  // LED2
+
+        }
+      </script> 
+    </div>
+    <div id="Device" class="tabcontent">
+      <p>Change the device name and password.</p>
+      <form action="/get">
+        <label for="devicename">Device name: </label>
+        <input type="text" name="devicename"  placeholder = "DoggyLights" required>
+        <br>
+        <label for="password">Password: </label>
+        <input type="password" name="password"  required>
+        <br>
+        <input type="submit" value="Save">
+      </form>
+    </div>
+    <script>
+      console.log(document.getElementById("defaultOpen").click());
+      function openTab(evt, tabName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tabcontent");
+        for (i = 0; i < tabcontent.length; i++) {
+          tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tablinks");
+        for (i = 0; i < tablinks.length; i++) {
+          tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+      }
+    </script>
+  </body>
+</html>

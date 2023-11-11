@@ -1,0 +1,5 @@
+Formatting:
+https://www.freeformatter.com/html-formatter.html#before-output
+
+For Arduino HTML variable:
+https://tomeko.net/online_tools/cpp_text_escape.php?lang=en
