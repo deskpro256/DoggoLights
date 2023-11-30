@@ -61,31 +61,26 @@ void preset3() {
 }
 
 void staticColor(RGB rgb1, RGB rgb2) {
-  button.tick();
-  int r1 = invertPwmSignal(rgb1.r);
-  button.tick();
-  int g1 = invertPwmSignal(rgb1.g);
-  button.tick();
-  int b1 = invertPwmSignal(rgb1.b);
-  button.tick();
-  int r2 = invertPwmSignal(rgb2.r);
-  button.tick();
-  int g2 = invertPwmSignal(rgb2.g);
-  button.tick();
-  int b2 = invertPwmSignal(rgb2.b);
-  button.tick();
-  ledcWrite(ledChannelR1, r1);
-  button.tick();
-  ledcWrite(ledChannelG1, g1);
-  button.tick();
-  ledcWrite(ledChannelB1, b1);
-  button.tick();
-  ledcWrite(ledChannelR2, r2);
-  button.tick();
-  ledcWrite(ledChannelG2, g2);
-  button.tick();
-  ledcWrite(ledChannelB2, b2);
-  button.tick();
+  while (running) {
+    button.tick();
+    if (clicked) {
+      clicked = false;
+      break;
+    }
+    int r1 = invertPwmSignal(rgb1.r);
+    int g1 = invertPwmSignal(rgb1.g);
+    int b1 = invertPwmSignal(rgb1.b);
+    int r2 = invertPwmSignal(rgb2.r);
+    int g2 = invertPwmSignal(rgb2.g);
+    int b2 = invertPwmSignal(rgb2.b);
+    ledcWrite(ledChannelR1, r1);
+    ledcWrite(ledChannelG1, g1);
+    ledcWrite(ledChannelB1, b1);
+    ledcWrite(ledChannelR2, r2);
+    ledcWrite(ledChannelG2, g2);
+    ledcWrite(ledChannelB2, b2);
+    button.tick();
+  }
 }
 
 int invertPwmSignal(int invertedValue) {
@@ -180,24 +175,12 @@ void solidPulsing(bool r1, bool g1, bool b1, bool r2, bool g2, bool b2) {  //RGB
       break;
     }
     // changing the LED brightness with PWM
-    if (r1) {
-      ledcWrite(ledChannelR1, dutyCycle);
-    }
-    if (g1) {
-      ledcWrite(ledChannelG1, dutyCycle);
-    }
-    if (b1) {
-      ledcWrite(ledChannelB1, dutyCycle);
-    }
-    if (r2) {
-      ledcWrite(ledChannelR2, dutyCycle);
-    }
-    if (g2) {
-      ledcWrite(ledChannelG2, dutyCycle);
-    }
-    if (b2) {
-      ledcWrite(ledChannelB2, dutyCycle);
-    }
+    if (r1) { ledcWrite(ledChannelR1, dutyCycle); }
+    if (g1) { ledcWrite(ledChannelG1, dutyCycle); }
+    if (b1) { ledcWrite(ledChannelB1, dutyCycle); }
+    if (r2) { ledcWrite(ledChannelR2, dutyCycle); }
+    if (g2) { ledcWrite(ledChannelG2, dutyCycle); }
+    if (b2) { ledcWrite(ledChannelB2, dutyCycle); }
     button.tick();
     delay(10);
     button.tick();

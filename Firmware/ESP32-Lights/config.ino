@@ -28,17 +28,17 @@ void writeDevPreferences(String name, String pass) {
 
 void writeLEDConfig(int preset, int effect, double colorHue1, double colorHue2) {
   preferences.begin("DogLights", false);
-  if (preset == 1) {
+  if (preset == 0) {
     preferences.putInt("pre1Eff", effect);
     preferences.putDouble("pre1Col1", colorHue1);
     preferences.putDouble("pre1Col2", colorHue2);
   }
-  if (preset == 2) {
+  if (preset == 1) {
     preferences.putInt("pre2Eff", effect);
     preferences.putDouble("pre2Col1", colorHue1);
     preferences.putDouble("pre2Col2", colorHue2);
   }
-  if (preset == 3) {
+  if (preset == 2) {
     preferences.putInt("pre3Eff", effect);
     preferences.putDouble("pre3Col1", colorHue1);
     preferences.putDouble("pre3Col2", colorHue2);

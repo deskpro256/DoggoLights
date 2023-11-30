@@ -44,7 +44,7 @@ double preset3Color2;
 bool clicked = false;
 bool running = true;
 bool wifiRunning = false;
-int mode = 1;
+int mode = 0;
 int delayTime = 20;  // Speed control. Higher number = slower fades.
 float voltage;
 int temp;
@@ -65,9 +65,9 @@ int ledChannelB2 = 5;
 int resolution = 8;
 
 typedef struct {
-    int r;
-    int g;
-    int b;
+  int r;
+  int g;
+  int b;
 } RGB;
 
 OneButton button(BUTTON_PIN, true, true);
@@ -78,8 +78,7 @@ void setup() {
 
   button.attachClick(singleClick);
   button.attachDoubleClick(doubleClick);
-  button.attachLongPressStart(longPressStart);
-  button.attachLongPressStop(longPress);
+  button.attachLongPressStart(longPress);
 
   pinMode(BAT_ADC, INPUT);
 
@@ -106,7 +105,9 @@ void setup() {
   analogReadResolution(12);  // 12-bit ADC resolution for battery voltage read
   setupLEDPins();
   blinkBateryPercentColor(readBatteryValue());
+
   while (running) {
+    Serial.println("while (running)");
     button.tick();
     doTheAnimation();
   }

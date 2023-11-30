@@ -86,9 +86,9 @@ char HTML[] PROGMEM = "<!DOCTYPE html>\n"
                       "        <br />\n"
                       "        <label for=\"preset\">Preset:</label>\n"
                       "        <select id=\"preset\" name=\"preset\">\n"
-                      "          <option value=\"1\">Preset 1</option>\n"
-                      "          <option value=\"2\">Preset 2</option>\n"
-                      "          <option value=\"3\">Preset 3</option>\n"
+                      "          <option value=\"0\">Preset 1</option>\n"
+                      "          <option value=\"1\">Preset 2</option>\n"
+                      "          <option value=\"2\">Preset 3</option>\n"
                       "        </select>\n"
                       "        <br />\n"
                       "        <br />\n"
@@ -321,8 +321,9 @@ void setupWifi() {
       double hue2 = atoi(led2->value().c_str());
 
       writeLEDConfig(presetVal, effectVal, hue1, hue2);
+      mode = presetVal;
+      clicked = true;
       readPreferences();
-      mode = presetVal - 1;
     }
     // always respond to the client with something!
     request->send(200, "text/html", HTML);

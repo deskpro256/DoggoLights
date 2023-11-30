@@ -24,11 +24,6 @@ void doubleClick() {
   }
 }
 
-void longPressStart() {
-  allOff();
-  delay(100);
-}
-
 void longPress() {
   allOff();
   Serial.println("Go to sleep");

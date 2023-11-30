@@ -17,7 +17,6 @@ int readBatteryValue() {
 0%-24%   = Red
 */
 void blinkBateryPercentColor(int battPercent) {
-  Serial.print("Battery percent:");
   Serial.println(String(battPercent));
   if (battPercent <= 100 && battPercent >= 75) {
     //Green
