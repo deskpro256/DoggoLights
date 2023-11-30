@@ -17,7 +17,17 @@ Preferences preferences;
 #define ON 0
 #define OFF 255
 
-char red1, grn1, blu1, red2, grn2, blu2;
+int preset1Effect;
+double preset1Color1;
+double preset1Color2;
+
+int preset2Effect;
+double preset2Color1;
+double preset2Color2;
+
+int preset3Effect;
+double preset3Color1;
+double preset3Color2;
 
 #define BLUE_LED1 6
 #define RED_LED1 5
@@ -34,11 +44,12 @@ char red1, grn1, blu1, red2, grn2, blu2;
 bool clicked = false;
 bool running = true;
 bool wifiRunning = false;
-int mode = 69;
+int mode = 1;
 int delayTime = 20;  // Speed control. Higher number = slower fades.
 float voltage;
 int temp;
 int adcValue;
+
 //WiFi settings
 String ssid;
 String password;
@@ -52,7 +63,12 @@ int ledChannelR2 = 3;
 int ledChannelG2 = 4;
 int ledChannelB2 = 5;
 int resolution = 8;
-int anim = 0;
+
+typedef struct {
+    int r;
+    int g;
+    int b;
+} RGB;
 
 OneButton button(BUTTON_PIN, true, true);
 AsyncWebServer server(80);
@@ -62,7 +78,7 @@ void setup() {
 
   button.attachClick(singleClick);
   button.attachDoubleClick(doubleClick);
-  button.attachLongPressStart(longClick);
+  button.attachLongPressStart(longPressStart);
   button.attachLongPressStop(longPress);
 
   pinMode(BAT_ADC, INPUT);

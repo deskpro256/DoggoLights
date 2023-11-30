@@ -1,144 +1,224 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>DoggyLights🐶🌈</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" >
+    <title>DoggyLights</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
       body {
-      font-family: Trebuchet MS; 
-      color: #E7E8EB; 
-      background-color: #1B1B1B;}
+        font-family: Trebuchet MS;
+        text-align: center;
+        color: #e7e8eb;
+        background-color: #1b1b1b;
+      }
       /* Style the tab */
       .tab {
-      overflow: hidden;
-      border: 1px solid #eee;
-      color: #363636;
-      background-color: #121212;
+        overflow: hidden;
+        border: 1px solid #eee;
+        color: #363636;
+        background-color: #121212;
+      }
+      form {
+        display: inline-block;
+      }
+      input[type="submit"] {
+        background-color: #04aa6d;
+        border: none;
+        color: white;
+        padding: 16px 32px;
+        text-decoration: none;
+        margin: 4px 2px;
+        cursor: pointer;
       }
       /* Style the buttons inside the tab */
       .tab button {
-      background-color: inherit;
-      color: #eee; 
-      float: left;
-      border: none;
-      outline: none;
-      cursor: pointer;
-      width: 50%;
-      padding: 14px;
-      transition: 0.3s;
-      font-size: 17px;
+        background-color: inherit;
+        color: #eee;
+        float: left;
+        border: none;
+        outline: none;
+        cursor: pointer;
+        width: 50%;
+        padding: 14px;
+        transition: 0.3s;
+        font-size: 17px;
       }
       /* Change background color of buttons on hover */
       .tab button:hover {
-      background-color: #3d3d3d;
-      color: #eee; 
+        background-color: #3d3d3d;
+        color: #eee;
       }
       /* Create an active/current tablink class */
       .tab button.active {
-      background-color: #282828;
-      color: #eee; 
+        background-color: #282828;
+        color: #eee;
       }
       /* Style the tab content */
       .tabcontent {
-      display: none;
-      padding: 6px 12px;
-      border: 1px solid #ccc;
-      border-top: none;
+        display: none;
+        padding: 6px 12px;
+        border: 1px solid #ccc;
+        border-top: none;
       }
       .spectrum {
-      display: block;
-      width: 200px;
-      height: 30px;
-      margin: 0 0 -3px 7px;
-      background: -webkit-linear-gradient(left, hsl(0, 100%, 50%), hsl(60, 100%, 50%), hsl(120, 100%, 50%), hsl(180, 100%, 50%), hsl(240, 100%, 50%), hsl(300, 100%, 50%), hsl(360, 100%, 50%)  100%);
+        display: block;
+        width: 200px;
+        height: 30px;
+        margin: 0 0 -3px 7px;
+        background: -webkit-linear-gradient(left, hsl(0, 100%, 50%), hsl(60, 100%, 50%), hsl(120, 100%, 50%), hsl(180, 100%, 50%), hsl(240, 100%, 50%), hsl(300, 100%, 50%), hsl(360, 100%, 50%) 100%);
       }
-      input[type=range] {
-      width: 210px;
-      margin-top: -5px;
+      input[type="range"] {
+        width: 210px;
+        margin-top: -5px;
       }
     </style>
   </head>
   <body>
-    <h2>Dog light configurator</h2>
+    <h3>Dog light configurator</h3>
+    <p>Battery: 69%</p>
     <div class="tab">
       <button class="tablinks" onclick="openTab(event, 'Lights')" id="defaultOpen">Lights</button>
       <button class="tablinks" onclick="openTab(event, 'Device')">Device</button>
     </div>
     <div id="Lights" class="tabcontent">
-      <p>Configure your lights.</p>
-      <canvas id="myCanvas" width="250" height="150" ></canvas>
+      <canvas id="myCanvas" width="200" height="100"></canvas>
+      <br />
       <form action="/get">
-        <br>
-		<label for="effect">Effect:</label>
-		<select id="effect" name="effect">
-			<option value="static">Static</option>
-			<option value="pulsing">Pulsing</option>
-			<option value="flipflop">FlipFlop</option>
-			<option value="rainbow">Rainbow</option>
-		</select>
-        <br>
-        <br>
-		<label for="interval">Interval:</label>
-		<select id="interval" name="interval">
-			<option value="50">50ms</option>
-			<option value="100">100ms</option>
-			<option value="200">200ms</option>
-			<option value="300">300ms</option>
-		</select>
-        <br>
-        <p>LED 1 Color:</p>
-        <span class="spectrum"></span>
-        <input id="colorInput1" type="range" min="0" max="360" step="1" onpointerup=myFunc()>
-        <br>
-        <p>LED 2 Color:</p>
-        <span class="spectrum"></span>
-        <input id="colorInput2" type="range" min="0" max="360" step="1" onpointerup=myFunc()>
-        <br>
-        <input type="submit" value="Save">
+        <br />
+        <label for="preset">Preset:</label>
+        <select id="preset" name="preset">
+          <option value="1">Preset 1</option>
+          <option value="2">Preset 2</option>
+          <option value="3">Preset 3</option>
+        </select>
+        <br />
+        <br />
+        <label for="effect">Effect:</label>
+        <select id="effect" name="effect" onchange="effectChange()">
+          <option value="1">Static</option>
+          <option value="2">Breathing</option>
+          <option value="3">FlipFlop</option>
+          <option value="4">Rainbow</option>
+        </select>
+        <br />
+        <br />
+        <div id="colorInputs">
+          <input type="checkbox" id="bothLEDsCheck" onclick="sameLEDSliders()" /> Both LEDs same color.
+          <p>LED 1 Color:</p>
+          <span class="spectrum"></span>
+          <input name="colorInput1" id="colorInput1" type="range" min="0" max="360" step="1" oninput="sameLEDSliders()" />
+          <br />
+          <div id="LED2">
+            <p>LED 2 Color:</p>
+            <span class="spectrum"></span>
+            <input name="colorInput2" id="colorInput2" type="range" min="0" max="360" step="1" />
+          </div>
+        </div>
+        <br />
+        <br />
+        <input id="save" type="submit" value="Save" />
       </form>
       <script>
-        myFunc();
-        
-        function myFunc(){
-        var color1 = document.getElementById("colorInput1").value;
-        var color2 = document.getElementById("colorInput2").value;
         const c = document.getElementById("myCanvas");
         const ctx = c.getContext("2d");
-		
-		c.width = c.width;
-		
-        ctx.fillStyle = '#333';
-        ctx.fillRect(20, 20, 200, 100);  // Case
-        ctx.rect(20, 20, 200, 100);
-        ctx.stroke();
-		
-		ctx.shadowBlur=50;
-        ctx.fillStyle = 'hsla('+color1+',100%, 50%, 1.0)';
-		ctx.shadowColor='hsla('+color1+',100%, 50%, 0.8)';
-        ctx.fillRect(50, 50, 40, 40);  // LED1
-        
-		ctx.shadowBlur=50;
-        ctx.fillStyle = 'hsla('+color2+',100%, 50%, 1.0)';
-		ctx.shadowColor='hsla('+color2+',100%, 50%, 0.8)';
-        ctx.fillRect(150, 50, 40, 40);  // LED2
+        var color1 = document.getElementById("colorInput1").value;
+        var color2 = document.getElementById("colorInput2").value;
+        var effect = document.getElementById("effect").value;
+        let rainbow = 0;
 
+        function getRandomColor() {
+          min = Math.ceil(0);
+          max = Math.floor(360);
+          return Math.floor(Math.random() * (max - min + 1) + min); // The maximum is inclusive and the minimum is inclusive
         }
-      </script> 
+
+        function myFunc() {
+          ctx.clearRect(0, 0, c.width, c.height);
+          effect = document.getElementById("effect").value;
+          switch (effect) {
+            case "1": //static
+              color1 = document.getElementById("colorInput1").value;
+              color2 = document.getElementById("colorInput2").value;
+              glowAlphaRight = 1;
+              glowAlphaLeft = 1;
+              break;
+
+            case "2": //breathing
+              color1 = document.getElementById("colorInput1").value;
+              color2 = document.getElementById("colorInput2").value;
+              glowAlphaRight = Math.abs(Math.sin(Date.now() * 0.001));
+              glowAlphaLeft = glowAlphaRight;
+              break;
+
+            case "3": //flipflop
+              color1 = document.getElementById("colorInput1").value;
+              color2 = document.getElementById("colorInput2").value;
+              glowAlphaRight = Math.abs(Math.sin(Date.now() * 0.002));
+              glowAlphaLeft = Math.abs(Math.cos(Date.now() * 0.002));
+              break;
+
+            case "4": //rainbow
+              rainbow += 0.5;
+              if (rainbow > 360) {
+                rainbow = 0;
+              }
+              color1 = rainbow;
+              color2 = rainbow;
+              glowAlphaRight = 1;
+              glowAlphaLeft = 1;
+              break;
+          }
+
+          ctx.beginPath();
+          ctx.fillStyle = "#333";
+          ctx.fillRect(0, 0, 200, 100); // Case
+          ctx.rect(0, 0, 200, 100);
+          ctx.stroke();
+          ctx.closePath();
+
+          ctx.beginPath();
+          ctx.shadowBlur = 50;
+          ctx.fillStyle = "hsla(" + color1 + ",100%, 50%, 1.0)";
+          ctx.shadowColor = "hsla(" + color1 + ",100%, 50%, 0.8)";
+          ctx.fillRect(30, 30, 40, 40); // LED1
+          ctx.globalAlpha = glowAlphaLeft;
+          ctx.closePath();
+
+          ctx.beginPath();
+          ctx.shadowBlur = 50;
+          ctx.fillStyle = "hsla(" + color2 + ",100%, 50%, 1.0)";
+          ctx.shadowColor = "hsla(" + color2 + ",100%, 50%, 0.8)";
+          ctx.fillRect(130, 30, 40, 40); // LED2
+          ctx.globalAlpha = glowAlphaRight;
+          ctx.closePath();
+
+          // Request the next frame
+          requestAnimationFrame(myFunc);
+        }
+
+        // Start the animation loop
+        myFunc();
+      </script>
     </div>
     <div id="Device" class="tabcontent">
-      <p>Change the device name and password.</p>
+      <p>Change the device name and password. This will reset the device. You'll need to connect again using the new credentials.</p>
       <form action="/get">
         <label for="devicename">Device name: </label>
-        <input type="text" name="devicename"  placeholder = "DoggyLights" required>
-        <br>
+        <br />
+        <input type="text" name="devicename" placeholder="DoggyLights" required />
+        <br />
+        <br />
         <label for="password">Password: </label>
-        <input type="password" name="password"  required>
-        <br>
-        <input type="submit" value="Save">
+        <input type="checkbox" onclick="showPassword()" /> Show
+        <br />
+        <input type="password" name="password" id="passInput" required />
+        <br />
+        <br />
+        <br />
+        <input type="submit" value="Save" />
       </form>
     </div>
     <script>
-      console.log(document.getElementById("defaultOpen").click());
+      document.getElementById("defaultOpen").click();
       function openTab(evt, tabName) {
         var i, tabcontent, tablinks;
         tabcontent = document.getElementsByClassName("tabcontent");
@@ -151,6 +231,39 @@
         }
         document.getElementById(tabName).style.display = "block";
         evt.currentTarget.className += " active";
+      }
+
+      function showPassword() {
+        var x = document.getElementById("passInput");
+        if (x.type === "password") {
+          x.type = "text";
+        } else {
+          x.type = "password";
+        }
+      }
+      function effectChange() {
+        var colorInputsAll = document.getElementById("colorInputs");
+        var effect = document.getElementById("effect").value;
+        if (effect == "4") {
+          colorInputsAll.style.display = "none";
+        } else {
+          colorInputsAll.style.display = "block";
+        }
+      }
+      function sameLEDSliders() {
+        var led2Text = document.getElementById("LED2");
+        var spectrum2 = document.getElementById("spectrum2");
+        var colorInput2 = document.getElementById("colorInput2");
+        var check = document.getElementById("bothLEDsCheck");
+
+        if (check.checked) {
+          var LED1 = document.getElementById("colorInput1");
+          var LED2 = document.getElementById("colorInput2");
+          LED2.value = LED1.value;
+          led2Text.style.display = "none";
+        } else {
+          led2Text.style.display = "block";
+        }
       }
     </script>
   </body>

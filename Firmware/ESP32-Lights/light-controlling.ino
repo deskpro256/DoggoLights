@@ -1,3 +1,144 @@
+void preset1() {
+  button.tick();
+  RGB rgb1 = hslToRgb(preset1Color1);
+  RGB rgb2 = hslToRgb(preset1Color2);
+  switch (preset1Effect) {
+    case 1:
+      staticColor(rgb1, rgb2);
+      break;
+    case 2:
+      breathing(rgb1, rgb2);
+      break;
+    case 3:
+      flipFlop(rgb1, rgb2);
+      break;
+    case 4:
+      rainbow();
+      break;
+  }
+  button.tick();
+}
+
+void preset2() {
+  button.tick();
+  RGB rgb1 = hslToRgb(preset2Color1);
+  RGB rgb2 = hslToRgb(preset2Color2);
+  switch (preset2Effect) {
+    case 1:
+      staticColor(rgb1, rgb2);
+      break;
+    case 2:
+      breathing(rgb1, rgb2);
+      break;
+    case 3:
+      flipFlop(rgb1, rgb2);
+      break;
+    case 4:
+      rainbow();
+      break;
+  }
+  button.tick();
+}
+void preset3() {
+  button.tick();
+  RGB rgb1 = hslToRgb(preset3Color1);
+  RGB rgb2 = hslToRgb(preset3Color2);
+  switch (preset3Effect) {
+    case 1:
+      staticColor(rgb1, rgb2);
+      break;
+    case 2:
+      breathing(rgb1, rgb2);
+      break;
+    case 3:
+      flipFlop(rgb1, rgb2);
+      break;
+    case 4:
+      rainbow();
+      break;
+  }
+  button.tick();
+}
+
+void staticColor(RGB rgb1, RGB rgb2) {
+  button.tick();
+  int r1 = invertPwmSignal(rgb1.r);
+  button.tick();
+  int g1 = invertPwmSignal(rgb1.g);
+  button.tick();
+  int b1 = invertPwmSignal(rgb1.b);
+  button.tick();
+  int r2 = invertPwmSignal(rgb2.r);
+  button.tick();
+  int g2 = invertPwmSignal(rgb2.g);
+  button.tick();
+  int b2 = invertPwmSignal(rgb2.b);
+  button.tick();
+  ledcWrite(ledChannelR1, r1);
+  button.tick();
+  ledcWrite(ledChannelG1, g1);
+  button.tick();
+  ledcWrite(ledChannelB1, b1);
+  button.tick();
+  ledcWrite(ledChannelR2, r2);
+  button.tick();
+  ledcWrite(ledChannelG2, g2);
+  button.tick();
+  ledcWrite(ledChannelB2, b2);
+  button.tick();
+}
+
+int invertPwmSignal(int invertedValue) {
+  // Ensure the invertedValue is in the range [0, 255]
+  invertedValue = (invertedValue < 0) ? 0 : (invertedValue > 255) ? 255
+                                                                  : invertedValue;
+  // Convert the inverted PWM signal to the standard PWM signal
+  int standardValue = 255 - invertedValue;
+  return standardValue;
+}
+
+RGB hslToRgb(double h) {
+  // Ensure h is in the range [0, 360), s and l are in the range [0, 1]
+  h = fmod((h + 360), 360);
+  double s = 1;    //fmax(0, fmin(1, s));
+  double l = 0.5;  //fmax(0, fmin(1, l));
+
+  // Convert HSL to RGB
+  double c = (1 - fabs(2 * l - 1)) * s;
+  double x = c * (1 - fabs(fmod(h / 60, 2) - 1));
+  double m = l - c / 2;
+
+  int red, green, blue;
+
+  if (h >= 0 && h < 60) {
+    red = (int)((c + m) * 255);
+    green = (int)((x + m) * 255);
+    blue = (int)(m * 255);
+  } else if (h >= 60 && h < 120) {
+    red = (int)((x + m) * 255);
+    green = (int)((c + m) * 255);
+    blue = (int)(m * 255);
+  } else if (h >= 120 && h < 180) {
+    red = (int)(m * 255);
+    green = (int)((c + m) * 255);
+    blue = (int)((x + m) * 255);
+  } else if (h >= 180 && h < 240) {
+    red = (int)(m * 255);
+    green = (int)((x + m) * 255);
+    blue = (int)((c + m) * 255);
+  } else if (h >= 240 && h < 300) {
+    red = (int)((x + m) * 255);
+    green = (int)(m * 255);
+    blue = (int)((c + m) * 255);
+  } else {
+    red = (int)((c + m) * 255);
+    green = (int)(m * 255);
+    blue = (int)((x + m) * 255);
+  }
+
+  RGB result = { red, green, blue };
+  return result;
+}
 
 void setupLEDPins() {
   // configure LED PWM functionalitites
@@ -24,17 +165,12 @@ void solid(int r1, int g1, int b1, int r2, int g2, int b2) {
   ledcWrite(ledChannelG2, g2);
   ledcWrite(ledChannelB2, b2);
 }
-// t=interval
-void solidPulsing(bool r1, bool g1, bool b1, bool r2, bool g2, bool b2, int t) {
-  // increase the LED brightness
-  allOff();
-  red1 = OFF;
-  grn1 = OFF;
-  blu1 = OFF;
-  red2 = OFF;
-  grn2 = OFF;
-  blu2 = OFF;
 
+void solidPulsing(bool r1, bool g1, bool b1, bool r2, bool g2, bool b2) {  //RGB rgb1, RGB rgb2
+                                                                           // increase the LED brightness
+  button.tick();
+  allOff();
+  button.tick();
   for (int dutyCycle = 255; dutyCycle >= 0; dutyCycle--) {
 
     if (clicked) {
@@ -46,30 +182,24 @@ void solidPulsing(bool r1, bool g1, bool b1, bool r2, bool g2, bool b2, int t) {
     // changing the LED brightness with PWM
     if (r1) {
       ledcWrite(ledChannelR1, dutyCycle);
-      red1 = ON;
     }
     if (g1) {
       ledcWrite(ledChannelG1, dutyCycle);
-      grn1 = ON;
     }
     if (b1) {
       ledcWrite(ledChannelB1, dutyCycle);
-      blu1 = ON;
     }
     if (r2) {
       ledcWrite(ledChannelR2, dutyCycle);
-      red2 = ON;
     }
     if (g2) {
       ledcWrite(ledChannelG2, dutyCycle);
-      grn2 = ON;
     }
     if (b2) {
       ledcWrite(ledChannelB2, dutyCycle);
-      blu2 = ON;
     }
     button.tick();
-    delay(t);
+    delay(10);
     button.tick();
   }
 
@@ -90,7 +220,7 @@ void solidPulsing(bool r1, bool g1, bool b1, bool r2, bool g2, bool b2, int t) {
     if (g2) { ledcWrite(ledChannelG2, dutyCycle); }
     if (b2) { ledcWrite(ledChannelB2, dutyCycle); }
     button.tick();
-    delay(t);
+    delay(10);
     button.tick();
   }
   allOff();
@@ -115,158 +245,6 @@ void blink(int r1, int g1, int b1, int r2, int g2, int b2) {
   }
 }
 
-void fadeUp(int fadePin1, int fadePin2, int onPin1, int onPin2, int offPin1, int offPin2) {
-  //set constant colors
-  digitalWrite(onPin1, HIGH);
-  digitalWrite(onPin2, HIGH);
-  digitalWrite(offPin1, LOW);
-  digitalWrite(offPin2, LOW);
-  //set current brightness out of 1000
-  for (int bright = 1; bright < 1000; bright = bright + 10) {
-    yield();
-    //set PWM lengths
-    int on = bright;
-    int off = 1000 - bright;
-    //software PWM for 'time' ms
-    for (int run = 0; run < delayTime; run++) {
-      yield();
-      digitalWrite(fadePin1, HIGH);
-      digitalWrite(fadePin2, HIGH);
-      delayMicroseconds(on);
-      digitalWrite(fadePin1, LOW);
-      digitalWrite(fadePin2, LOW);
-      delayMicroseconds(off);
-    }
-  }
-}
-
-void fadeDown(int fadePin1, int fadePin2, int onPin1, int onPin2, int offPin1, int offPin2) {
-  //set constant colors
-  digitalWrite(onPin1, HIGH);
-  digitalWrite(onPin2, HIGH);
-  digitalWrite(offPin1, LOW);
-  digitalWrite(offPin2, LOW);
-  //set current brightness out of 1000
-  for (int bright = 1; bright < 1000; bright = bright + 10) {
-    yield();
-    //set inverse PWM lengths
-    int on = 1000 - bright;
-    int off = bright;
-    //software PWM for 'time' ms
-    for (int run = 0; run < delayTime; run++) {
-      yield();
-      digitalWrite(fadePin1, HIGH);
-      digitalWrite(fadePin2, HIGH);
-      delayMicroseconds(on);
-      digitalWrite(fadePin1, LOW);
-      digitalWrite(fadePin2, LOW);
-      delayMicroseconds(off);
-    }
-  }
-}
-
-void red() {
-  red1 = ON;
-  grn1 = OFF;
-  blu1 = OFF;
-  red2 = ON;
-  grn2 = OFF;
-  blu2 = OFF;
-  ledcWrite(ledChannelR1, ON);
-  ledcWrite(ledChannelG1, OFF);
-  ledcWrite(ledChannelB1, OFF);
-  ledcWrite(ledChannelR2, ON);
-  ledcWrite(ledChannelG2, OFF);
-  ledcWrite(ledChannelB2, OFF);
-}
-void green() {
-  red1 = OFF;
-  grn1 = ON;
-  blu1 = OFF;
-  red2 = OFF;
-  grn2 = ON;
-  blu2 = OFF;
-  ledcWrite(ledChannelR1, OFF);
-  ledcWrite(ledChannelG1, ON);
-  ledcWrite(ledChannelB1, OFF);
-  ledcWrite(ledChannelR2, OFF);
-  ledcWrite(ledChannelG2, ON);
-  ledcWrite(ledChannelB2, OFF);
-}
-void blue() {
-  red1 = OFF;
-  grn1 = OFF;
-  blu1 = ON;
-  red2 = OFF;
-  grn2 = OFF;
-  blu2 = ON;
-  ledcWrite(ledChannelR1, OFF);
-  ledcWrite(ledChannelG1, OFF);
-  ledcWrite(ledChannelB1, ON);
-  ledcWrite(ledChannelR2, OFF);
-  ledcWrite(ledChannelG2, OFF);
-  ledcWrite(ledChannelB2, ON);
-}
-void white() {
-  red1 = ON;
-  grn1 = ON;
-  blu1 = ON;
-  red2 = ON;
-  grn2 = ON;
-  blu2 = ON;
-  ledcWrite(ledChannelR1, ON);
-  ledcWrite(ledChannelG1, ON);
-  ledcWrite(ledChannelB1, ON);
-  ledcWrite(ledChannelR2, ON);
-  ledcWrite(ledChannelG2, ON);
-  ledcWrite(ledChannelB2, ON);
-}
-
-void yellow() {
-  red1 = ON;
-  grn1 = ON;
-  blu1 = OFF;
-  red2 = ON;
-  grn2 = ON;
-  blu2 = OFF;
-  ledcWrite(ledChannelR1, ON);
-  ledcWrite(ledChannelG1, ON);
-  ledcWrite(ledChannelB1, OFF);
-  ledcWrite(ledChannelR2, ON);
-  ledcWrite(ledChannelG2, ON);
-  ledcWrite(ledChannelB2, OFF);
-}
-
-void cyan() {
-  red1 = OFF;
-  grn1 = ON;
-  blu1 = ON;
-  red2 = OFF;
-  grn2 = ON;
-  blu2 = ON;
-  ledcWrite(ledChannelR1, OFF);
-  ledcWrite(ledChannelG1, ON);
-  ledcWrite(ledChannelB1, ON);
-  ledcWrite(ledChannelR2, OFF);
-  ledcWrite(ledChannelG2, ON);
-  ledcWrite(ledChannelB2, ON);
-}
-
-void purple() {
-  red1 = ON;
-  grn1 = OFF;
-  blu1 = ON;
-  red2 = ON;
-  grn2 = OFF;
-  blu2 = ON;
-  ledcWrite(ledChannelR1, ON);
-  ledcWrite(ledChannelG1, OFF);
-  ledcWrite(ledChannelB1, ON);
-  ledcWrite(ledChannelR2, ON);
-  ledcWrite(ledChannelG2, OFF);
-  ledcWrite(ledChannelB2, ON);
-}
-
 void allOff() {
   ledcWrite(ledChannelR1, OFF);
   ledcWrite(ledChannelG1, OFF);
@@ -277,30 +255,81 @@ void allOff() {
 }
 
 void rainbow() {
-  fadeUp(GREEN_LED1, GREEN_LED2, RED_LED1, RED_LED2, BLUE_LED1, BLUE_LED2);    //red to yellow
-  fadeDown(RED_LED1, RED_LED2, GREEN_LED1, GREEN_LED2, BLUE_LED1, BLUE_LED2);  //yellow to green
-  fadeUp(BLUE_LED1, BLUE_LED2, GREEN_LED1, GREEN_LED2, RED_LED1, RED_LED2);    //green to cyan
-  fadeDown(GREEN_LED1, GREEN_LED2, BLUE_LED1, BLUE_LED2, RED_LED1, RED_LED2);  //cyan to blue
-  fadeUp(RED_LED1, RED_LED2, BLUE_LED1, BLUE_LED2, GREEN_LED1, GREEN_LED2);    //blue to purple
-  fadeDown(BLUE_LED1, BLUE_LED2, RED_LED1, RED_LED2, GREEN_LED1, GREEN_LED2);  //purple to red
-}
-void rainbow2() {
-  button.tick();
-  solidPulsing(1, 0, 0, 1, 0, 0, 5);  //red
-  button.tick();
-  solidPulsing(1, 1, 0, 1, 1, 0, 5);  //yellow
-  button.tick();
-  solidPulsing(0, 1, 0, 0, 1, 0, 5);  //green
-  button.tick();
-  solidPulsing(0, 1, 1, 0, 1, 1, 5);  //cyan?
-  button.tick();
-  solidPulsing(0, 0, 1, 0, 0, 1, 5);  //blue
-  button.tick();
-  solidPulsing(1, 0, 1, 1, 0, 1, 5);  //purple
+  RGB rgb1;
+  int i;
+  for (i = 0; i <= 360; i++) {
+    if (clicked) {
+      break;
+    }
+    if (!running) {
+      break;
+    }
+    button.tick();
+    rgb1 = hslToRgb(i);
+    button.tick();
+    int r1 = invertPwmSignal(rgb1.r);
+    button.tick();
+    int g1 = invertPwmSignal(rgb1.g);
+    button.tick();
+    int b1 = invertPwmSignal(rgb1.b);
+    button.tick();
+    int r2 = invertPwmSignal(rgb1.r);
+    button.tick();
+    int g2 = invertPwmSignal(rgb1.g);
+    button.tick();
+    int b2 = invertPwmSignal(rgb1.b);
+    button.tick();
+    ledcWrite(ledChannelR1, r1);
+    button.tick();
+    ledcWrite(ledChannelG1, g1);
+    button.tick();
+    ledcWrite(ledChannelB1, b1);
+    button.tick();
+    ledcWrite(ledChannelR2, r2);
+    button.tick();
+    ledcWrite(ledChannelG2, g2);
+    button.tick();
+    ledcWrite(ledChannelB2, b2);
+    button.tick();
+    delay(10);
+    button.tick();
+  }
+  if (i >= 360) {
+    i = 0;
+  };
   button.tick();
 }
 
-void pawlice() {
+void breathing(RGB rgb1, RGB rgb2) {
+  button.tick();
+  solidPulsing(1, 1, 0, 0, 1, 0);
+  button.tick();
+}
+
+/*
+  int r1 = invertPwmSignal(rgb1.r);
+  int g1 = invertPwmSignal(rgb1.g);
+  int b1 = invertPwmSignal(rgb1.b);
+  int r2 = invertPwmSignal(rgb2.r);
+  int g2 = invertPwmSignal(rgb2.g);
+  int b2 = invertPwmSignal(rgb2.b);
+  ledcWrite(ledChannelR1, r1);
+  ledcWrite(ledChannelG1, g1);
+  ledcWrite(ledChannelB1, b1);
+  ledcWrite(ledChannelR2, r2);
+  ledcWrite(ledChannelG2, g2);
+  ledcWrite(ledChannelB2, b2);
+*/
+
+void flipFlop(RGB rgb1, RGB rgb2) {
+  button.tick();
+  int r1 = invertPwmSignal(rgb1.r);
+  int g1 = invertPwmSignal(rgb1.g);
+  int b1 = invertPwmSignal(rgb1.b);
+  int r2 = invertPwmSignal(rgb2.r);
+  int g2 = invertPwmSignal(rgb2.g);
+  int b2 = invertPwmSignal(rgb2.b);
+  button.tick();
   unsigned long previousMillis = 0;  // will store last time LED was updated
   const long interval = 300;         // interval at which to blink (milliseconds)
   unsigned long currentMillis = millis();
@@ -320,103 +349,49 @@ void pawlice() {
 
       // if the LED is off turn it on and vice-versa:
       if (led1State == OFF) {
+        button.tick();
         led1State = ON;
         led2State = OFF;
+        ledcWrite(ledChannelR1, r1);
+        ledcWrite(ledChannelG1, g1);
+        ledcWrite(ledChannelB1, b1);
+        ledcWrite(ledChannelR2, OFF);
+        ledcWrite(ledChannelG2, OFF);
+        ledcWrite(ledChannelB2, OFF);
       } else {
+        button.tick();
         led1State = OFF;
         led2State = ON;
+        ledcWrite(ledChannelR1, OFF);
+        ledcWrite(ledChannelG1, OFF);
+        ledcWrite(ledChannelB1, OFF);
+        ledcWrite(ledChannelR2, r2);
+        ledcWrite(ledChannelG2, g2);
+        ledcWrite(ledChannelB2, b2);
       }
-      ledcWrite(ledChannelR1, led1State);
-      ledcWrite(ledChannelB2, led2State);
     }
   }
 }
 
 void doTheAnimation() {
+  button.tick();
+  Serial.println(mode);
   switch (mode) {
     case 0:
-      red();
+      button.tick();
+      preset1();
+      button.tick();
       break;
     case 1:
-      yellow();
+      button.tick();
+      preset2();
+      button.tick();
       break;
     case 2:
-      green();
-      break;
-    case 3:
-      cyan();
-      break;
-    case 4:
-      blue();
-      break;
-    case 5:
-      purple();
-      break;
-    case 6:
-      white();
-      break;
-    case 7:
-      pawlice();
-      break;
-    case 8:
-      //red
-      solidPulsing(1, 0, 0, 1, 0, 0, 10);
-      break;
-    case 9:
-      //yellow
-      solidPulsing(1, 1, 0, 1, 1, 0, 10);
-      break;
-    case 10:
-      //green
-      solidPulsing(0, 1, 0, 0, 1, 0, 10);
-      break;
-    case 11:
-      //cyan
-      solidPulsing(0, 1, 1, 0, 1, 1, 10);
-      break;
-    case 12:
-      //blue
-      solidPulsing(0, 0, 1, 0, 0, 1, 10);
-      break;
-    case 13:
-      //purple
-      solidPulsing(1, 0, 1, 1, 0, 1, 10);
-      break;
-    case 14:
-      //white
-      solidPulsing(1, 1, 1, 1, 1, 1, 10);
-      break;
-    case 69:
-      // saved setting
-      defaultMode();
-      break;
-    default:
-      red();
+      button.tick();
+      preset3();
+      button.tick();
       break;
   }
+  button.tick();
 }
-
-void defaultMode() {
-  readPreferences();
-  mode = anim;
-}
-
-/*
-void doTheAnimation() {
-  switch (anim) {
-    case SOLID:
-      solid(red1, grn1, blu1, red2, grn2, blu2);
-      break;
-    case PULSING:
-      //solidPulsing();
-      break;
-    case RAINBOW:
-      rainbow();
-      break;
-    default:
-      allOff();
-      break;
-  }
-}
-
-*/

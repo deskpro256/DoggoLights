@@ -2,31 +2,32 @@ push button 1 sec > turns on
 check battery > if low, blink
 read saved animation
 starts animation
-push button 3 sec > turns off (goes to sleep)
+push button 1 sec > turns off (goes to sleep)
 
-while sleeping > wake up every hour to check battery
-	if batVoltage <=3V > blink red 3 times.
-
-when powered on, if pushed button 2 sec, turn on wifi server for config, blink blue 3 times
-double click  save current anim
+when powered on, if pushed button 2 times, turn on wifi server for config, blink blue 3 times
 when saving config, blink green 3 times
 indicate wifi is off after config with purple 3 times
 
 LED animations:
 
-solid(r1, g1, b1, r2, g2, b2)
-solid_pulsing (r1, g1, b1, r2, g2, b2, t) t=interval
-rainbow(t) t = interval between colors
+staticColor
+breathing
+flipFlop
+rainbow
 
+Preferences:
 
-preferences{
-  ssid = preferences.getString("ssid", "DoggyLights");
-  password = preferences.getString("password", "password123");
-  anim = preferences.getInt("anim", 1);
-  red1 = preferences.getChar("red1", 255);
-  grn1 = preferences.getChar("grn1", 0);
-  blu1 = preferences.getChar("blu1", 0);
-  red2 = preferences.getChar("red2", 255);
-  grn2 = preferences.getChar("grn2", 0);
-  blu2 = preferences.getChar("blu2", 0);
-}
+ssid = preferences.getString("ssid", "DogLights");
+password = preferences.getString("password", "");
+
+preset1Effect = preferences.getInt("pre1Eff", 1);
+preset1Color1 = preferences.getDouble("pre1Col1", 0);
+preset1Color2 = preferences.getDouble("pre1Col2", 0);
+
+preset2Effect = preferences.getInt("pre2Eff", 2);
+preset2Color1 = preferences.getDouble("pre2Col1", 120);
+preset2Color2 = preferences.getDouble("pre2Col2", 120);
+
+preset3Effect = preferences.getInt("pre3Eff", 4);
+preset3Color1 = preferences.getDouble("pre3Col1", 0);
+preset3Color2 = preferences.getDouble("pre3Col2", 0);
