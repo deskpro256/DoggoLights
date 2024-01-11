@@ -1,4 +1,5 @@
-#RGB LED Lights for dogs
+# RGB LED Lights for dogs
+
 We have a happy small black dachshund running around with his friends behind our house. Last year I made a quick and dirty prototype where I reused an IC I found in an old LED light, it worked fine, but then I had the idea, that I could make some for the whole squad. About 10 doggies running around.
 
 Imagine every doggie has his own color, so you know which is which in the dark evenings. And you have a light show!
