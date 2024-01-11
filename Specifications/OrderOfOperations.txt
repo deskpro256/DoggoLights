@@ -1,33 +1,109 @@
-push button 1 sec > turns on
-check battery > if low, blink
-read saved animation
-starts animation
-push button 1 sec > turns off (goes to sleep)
+Single short click to turn it on and click through the modes.
+When turning on, it reads the battery voltage and blinks a color according to a percentage: green, yellow, red.
+Then starts the saved mode animations.
+There are 3 presets already set up (red static, green pulsing and rainbow cycle), they can be changed.
+To start the configuration server, quickly double click the button. A blue and green light will flash and start a WiFi access point named "DogLights". The WiFi has no password a first, you can change the name and password to your liking.
+To access it, connect to the WiFi and head to "doglights.local" or 192.168.4.1.
+As there is no app, I suggest making a shortcut from your web browser for easy access on the home screen.
+To turn off the WiFi AP, press and hold it again for 1 second.
+The WiFi AP will turn off after 2 minutes of inactivity to save battery.
+To turn off the lights, press and hold the button for 1 second.
 
-when powered on, if pushed button 2 times, turn on wifi server for config, blink blue 3 times
-when saving config, blink green 3 times
-indicate wifi is off after config with purple 3 times
 
-LED animations:
+Short video of it on my dog: https://youtube.com/shorts/czCEe3qOvLs
+Current measurements: https://youtube.com/shorts/X5di6Msu4Fo
+Animating: https://youtu.be/XCs5S-U5Ewk
+Another one: https://youtu.be/2sCqAeW33wY
 
-staticColor
-breathing
-flipFlop
-rainbow
 
-Preferences:
+Languages:
+=================== ENG
 
-ssid = preferences.getString("ssid", "DogLights");
-password = preferences.getString("password", "");
+Power On and Mode Switching:
+Turn on the dog light with a single short click.
+Click the button to cycle through different modes.
+Upon turning on, it displays the battery level with colors: green for high, yellow for medium, and red for low.
 
-preset1Effect = preferences.getInt("pre1Eff", 1);
-preset1Color1 = preferences.getDouble("pre1Col1", 0);
-preset1Color2 = preferences.getDouble("pre1Col2", 0);
+Saved Mode Animations:
+After displaying the battery level, the light starts the saved mode animations.
+Three presets are available: red static, green pulsing, and rainbow cycle. You can change these presets.
 
-preset2Effect = preferences.getInt("pre2Eff", 2);
-preset2Color1 = preferences.getDouble("pre2Col1", 120);
-preset2Color2 = preferences.getDouble("pre2Col2", 120);
+Configuration Setup:
+To configure the light, quickly double click the button.
+A blue and green light will flash, creating a WiFi access point named "DogLights."
+Initially, there's no password; you can customize the WiFi name and password.
+Access the configuration by connecting to the WiFi and visiting "doglights.local" or 192.168.4.1.
 
-preset3Effect = preferences.getInt("pre3Eff", 4);
-preset3Color1 = preferences.getDouble("pre3Col1", 0);
-preset3Color2 = preferences.getDouble("pre3Col2", 0);
+Access and Convenience:
+As there's no app, create a shortcut from your web browser for easy access on the home screen.
+To turn off the WiFi access point, double click the button again, a blue and red light will flash.
+The WiFi access point will automatically turn off after 2 minutes of inactivity to conserve battery.
+
+Power Off:
+To turn off the lights, press and hold the button for 1 second.
+
+Charging the device:
+To charge the light, use the USB Type-C port located on the device.
+Remove the small silicone port protector before connecting the charging cable.
+Ensure the protector is securely placed back after charging to maintain water resistance and protect the port.
+
+=================== LAT
+
+
+Ieslēgšana un režīmu pārslēgšana:
+Ieslēdziet gaismu ar vienu īsu klikšķi.
+Noklikšķiniet uz pogas, lai pārslēgtos starp dažādiem režīmiem.
+Ieslēdzot, parāda akumulatora līmeni ar krāsām: zaļu par augstu, dzeltenu par vidēju un sarkanu par zemu.
+
+Saglabātās režīmu animācijas:
+Pēc akumulatora līmeņa parādīšanas gaismi sāk saglabātās režīmu animācijas.
+Pieejami trīs iepriekš iestatītie režīmi: sarkans statisks, zaļš pulsējošs un varavīksnes cikls. Tos var mainīt.
+
+Konfigurācijas iestatīšana:
+Lai konfigurētu gaismu, divreiz noklikšķiniet uz pogas.
+Nomirgos zila uz zaļa gaisma, ieslēdzot WiFi piekļuves punktu ar nosaukumu "DogLights."
+Sākotnēji nav parole, varat pielāgot WiFi nosaukumu un paroli.
+Piekļūstiet konfigurācijai, pieslēdzoties pie WiFi un apmeklējot "doglights.local" vai 192.168.4.1.
+
+Piekļuve un ērtības:
+Tā kā nav lietotnes, izveidojiet saīsni no savas interneta pārlūkprogrammas, lai viegli piekļūtu uz ekrāna.
+WiFi piekļuves punkta izslēgšanai nospiediet pogu divreiz. Nomirgos zila un sarkana gaisma.
+WiFi piekļuves punkts izslēgsies automātiski pēc 2 minūtēm neaktivitātes, lai saglabātu akumulatoru.
+
+Izslēgšana:
+Gaismas izslēgšanai nospiediet pogu un turiet to 1 sekundi.
+
+Ierīces uzlāde:
+Lai uzlādētu gaismu, izmantojiet USB Type-C pieslēgvielu, kas atrodas uz ierīces.
+Pirms pieslēgšanas lādēšanas kabelim noņemiet mazo silikona pieslēgvielas aizsardzību.
+Pārliecinieties, ka aizsardzība ir droši novietota atpakaļ pēc uzlādes, lai saglabātu ūdensizturību un aizsargātu pieslēgvietu.
+
+=================== RUS
+
+Включение и Переключение Режимов:
+Включите собачий свет одним коротким нажатием.
+Нажимайте кнопку для переключения между различными режимами.
+При включении отображается уровень заряда батареи цветами: зеленым для высокого, желтым для среднего и красным для низкого.
+
+Сохраненные Режимы Анимаций:
+После отображения уровня заряда свет начинает анимации сохраненных режимов.
+Три предустановленных режима: статичный красный, пульсирующий зеленый и цикл радуги. Их можно изменить.
+
+Настройка Конфигурации:
+Чтобы настроить свет, быстро дважды нажмите кнопку.
+Синий и зеленый свет мигают, создавая WiFi точку доступа с именем "DogLights."
+Изначально нет пароля; вы можете настроить имя и пароль WiFi.
+Доступ к настройкам осуществляется подключением к WiFi и посещением "doglights.local" или 192.168.4.1.
+
+Доступ и Удобство:
+Поскольку нет приложения, создайте ярлык из своего веб-браузера для удобства доступа на домашнем экране.
+Чтобы выключить точку доступа WiFi, дважды щелкните кнопку, синий и красный свет начнут мигать.
+Точка доступа WiFi отключится автоматически через 2 минуты бездействия для экономии заряда батареи.
+
+Выключение:
+Чтобы выключить свет, удерживайте кнопку 1 секунду.
+
+Зарядка устройства:
+Для зарядки используйте USB Type-C порт, расположенный на устройстве.
+Перед подключением зарядного кабеля снимите небольшую силиконовую защиту порта.
+Убедитесь, что защита надежно возвращена после зарядки, чтобы сохранить водонепроницаемость и защитить порт.
