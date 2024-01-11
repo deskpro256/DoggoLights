@@ -49,7 +49,6 @@ Ensure the protector is securely placed back after charging to maintain water re
 
 =================== LAT
 
-
 Ieslēgšana un režīmu pārslēgšana:
 Ieslēdziet gaismu ar vienu īsu klikšķi.
 Noklikšķiniet uz pogas, lai pārslēgtos starp dažādiem režīmiem.
