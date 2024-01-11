@@ -2,6 +2,8 @@ void preset1() {
   button.tick();
   RGB rgb1 = hslToRgb(preset1Color1);
   RGB rgb2 = hslToRgb(preset1Color2);
+  checkWiFiTimer();
+  button.tick();
   switch (preset1Effect) {
     case 1:
       staticColor(rgb1, rgb2);
@@ -23,6 +25,8 @@ void preset2() {
   button.tick();
   RGB rgb1 = hslToRgb(preset2Color1);
   RGB rgb2 = hslToRgb(preset2Color2);
+  checkWiFiTimer();
+  button.tick();
   switch (preset2Effect) {
     case 1:
       staticColor(rgb1, rgb2);
@@ -43,6 +47,8 @@ void preset3() {
   button.tick();
   RGB rgb1 = hslToRgb(preset3Color1);
   RGB rgb2 = hslToRgb(preset3Color2);
+  checkWiFiTimer();
+  button.tick();
   switch (preset3Effect) {
     case 1:
       staticColor(rgb1, rgb2);
@@ -62,6 +68,7 @@ void preset3() {
 
 void staticColor(RGB rgb1, RGB rgb2) {
   while (running) {
+    checkWiFiTimer();
     button.tick();
     if (clicked) {
       clicked = false;
@@ -166,6 +173,8 @@ void solidPulsing(bool r1, bool g1, bool b1, bool r2, bool g2, bool b2) {  //RGB
   button.tick();
   allOff();
   button.tick();
+  checkWiFiTimer();
+  button.tick();
   for (int dutyCycle = 255; dutyCycle >= 0; dutyCycle--) {
 
     if (clicked) {
@@ -238,6 +247,8 @@ void allOff() {
 }
 
 void rainbow() {
+  checkWiFiTimer();
+  button.tick();
   RGB rgb1;
   int i;
   for (i = 0; i <= 360; i++) {
@@ -284,25 +295,58 @@ void rainbow() {
 }
 
 void breathing(RGB rgb1, RGB rgb2) {
+  checkWiFiTimer();
   button.tick();
-  solidPulsing(1, 1, 0, 0, 1, 0);
-  button.tick();
-}
-
-/*
   int r1 = invertPwmSignal(rgb1.r);
   int g1 = invertPwmSignal(rgb1.g);
   int b1 = invertPwmSignal(rgb1.b);
   int r2 = invertPwmSignal(rgb2.r);
   int g2 = invertPwmSignal(rgb2.g);
   int b2 = invertPwmSignal(rgb2.b);
-  ledcWrite(ledChannelR1, r1);
-  ledcWrite(ledChannelG1, g1);
-  ledcWrite(ledChannelB1, b1);
-  ledcWrite(ledChannelR2, r2);
-  ledcWrite(ledChannelG2, g2);
-  ledcWrite(ledChannelB2, b2);
-*/
+  button.tick();
+  allOff();
+  button.tick();
+  for (int percent = 100; percent >= 0; percent--) {
+
+    if (clicked) {
+      break;
+    }
+    if (!running) {
+      break;
+    }
+    ledcWrite(ledChannelR1, map(percent, 0, 100, 255, r1));
+    ledcWrite(ledChannelG1, map(percent, 0, 100, 255, g1));
+    ledcWrite(ledChannelB1, map(percent, 0, 100, 255, b1));
+    ledcWrite(ledChannelR2, map(percent, 0, 100, 255, r2));
+    ledcWrite(ledChannelG2, map(percent, 0, 100, 255, g2));
+    ledcWrite(ledChannelB2, map(percent, 0, 100, 255, b2));
+    button.tick();
+    delay(10);
+    button.tick();
+  }
+
+  // decrease the LED brightness
+  for (int percent = 0; percent <= 100; percent++) {
+    if (clicked) {
+      clicked = false;
+      break;
+    }
+    if (!running) {
+      break;
+    }
+    // changing the LED brightness with PWM
+    ledcWrite(ledChannelR1, map(percent, 0, 100, 255, r1));
+    ledcWrite(ledChannelG1, map(percent, 0, 100, 255, g1));
+    ledcWrite(ledChannelB1, map(percent, 0, 100, 255, b1));
+    ledcWrite(ledChannelR2, map(percent, 0, 100, 255, r2));
+    ledcWrite(ledChannelG2, map(percent, 0, 100, 255, g2));
+    ledcWrite(ledChannelB2, map(percent, 0, 100, 255, b2));
+    button.tick();
+    delay(10);
+    button.tick();
+  }
+  allOff();
+}
 
 void flipFlop(RGB rgb1, RGB rgb2) {
   button.tick();
@@ -320,6 +364,7 @@ void flipFlop(RGB rgb1, RGB rgb2) {
   int led2State = LOW;  // ledState used to set the LED
   allOff();
   while (running) {
+    checkWiFiTimer();
     button.tick();
     if (clicked) {
       clicked = false;

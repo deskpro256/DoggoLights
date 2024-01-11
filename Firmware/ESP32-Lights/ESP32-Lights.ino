@@ -4,6 +4,7 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
+#include "driver/adc.h"
 
 /*
 NOTE:
@@ -35,9 +36,11 @@ double preset3Color2;
 
 #define BLUE_LED2 1
 #define RED_LED2 2
-#define GREEN_LED2 3
+#define GREEN_LED2 21  // new boards
+//#define GREEN_LED2 3 //old prototype
 
-#define BAT_ADC 10
+//#define BAT_ADC 10 // old
+#define BAT_ADC 3  //new
 
 #define BUTTON_PIN 0
 
@@ -45,14 +48,19 @@ bool clicked = false;
 bool running = true;
 bool wifiRunning = false;
 int mode = 0;
-int delayTime = 20;  // Speed control. Higher number = slower fades.
+int batteryPercentage;
 float voltage;
 int temp;
-int adcValue;
+int sensorValue;
 
 //WiFi settings
 String ssid;
 String password;
+
+unsigned long previousWifiMillis = 0;  // Variable to store the last time the timer was updated
+const long WiFiInterval = 120000;      // Interval for 5 minutes in milliseconds // 10sec = 10000 5min = 300000 2min = 120000
+unsigned long currentWiFiMillis;       // Get the current time
+
 
 // setting PWM properties
 int freq = 5000;
@@ -102,12 +110,12 @@ void setup() {
   Serial.begin(115200);
 
   readPreferences();
-  analogReadResolution(12);  // 12-bit ADC resolution for battery voltage read
+  //setupBatteryReading();
   setupLEDPins();
   blinkBateryPercentColor(readBatteryValue());
 
   while (running) {
-    Serial.println("while (running)");
+    //Serial.println("while (running)");
     button.tick();
     doTheAnimation();
   }

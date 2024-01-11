@@ -15,12 +15,7 @@ void doubleClick() {
     setupWifi();
     blink(OFF, OFF, ON, OFF, ON, OFF);
   } else {
-    Serial.println("Stopping WiFi server");
-    blink(OFF, OFF, ON, ON, OFF, OFF);
-    server.end();
-    WiFi.disconnect(true);
-    WiFi.mode(WIFI_OFF);
-    wifiRunning = false;
+    shutdownWifi();
   }
 }
 

@@ -104,11 +104,23 @@
         <div id="colorInputs">
           <input type="checkbox" id="bothLEDsCheck" onclick="sameLEDSliders()" /> Both LEDs same color.
           <p>LED 1 Color:</p>
+		  <select id="colorInput3" name="colorInput3" onchange="sameLEDSliders()">
+			<option value="0">Red</option>
+			<option value="60">Yellow</option>
+			<option value="120">Green</option>
+			<option value="180">Cyan</option>
+			<option value="240">Blue</option>
+			<option value="300">Magenta</option>
+		  </select>
+          <br />
+          <br />
           <span class="spectrum"></span>
           <input name="colorInput1" id="colorInput1" type="range" min="0" max="360" step="1" oninput="sameLEDSliders()" />
           <br />
           <div id="LED2">
-            <p>LED 2 Color:</p>
+          <p>LED 2 Color:</p>
+          <br />
+          <br />
             <span class="spectrum"></span>
             <input name="colorInput2" id="colorInput2" type="range" min="0" max="360" step="1" />
           </div>
@@ -255,7 +267,7 @@
         var spectrum2 = document.getElementById("spectrum2");
         var colorInput2 = document.getElementById("colorInput2");
         var check = document.getElementById("bothLEDsCheck");
-
+		
         if (check.checked) {
           var LED1 = document.getElementById("colorInput1");
           var LED2 = document.getElementById("colorInput2");

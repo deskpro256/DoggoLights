@@ -1,13 +1,17 @@
 int readBatteryValue() {
-  adcValue = analogRead(BAT_ADC);
-  voltage = (adcValue / 4095.0) * 3.3;
-  if (voltage > 4.20) {
-    voltage = 4.20;
-  } else if (voltage < 2.90) {
-    voltage = 2.90;
-  }
-  voltage = 4.20;
-  return map(voltage, 2.90, 4.20, 0, 100);
+  analogReadResolution(12);  // 12-bit ADC resolution for battery voltage read
+  sensorValue = analogRead(BAT_ADC);
+  //Serial.print("Analog value: ");
+  //Serial.println(String(sensorValue));
+  voltage = sensorValue * (4.2 / 4095.0);
+  //Serial.print("Batt voltage: ");
+  //Serial.println(String(voltage));
+  batteryPercentage = map(voltage, 3.0, 4.2, 0, 100);
+  batteryPercentage = constrain(batteryPercentage, 0, 100);
+  //Serial.print("Batt %: ");
+  //Serial.println(String(batteryPercentage));
+  
+  return batteryPercentage;
 }
 
 /*
@@ -17,7 +21,8 @@ int readBatteryValue() {
 0%-24%   = Red
 */
 void blinkBateryPercentColor(int battPercent) {
-  Serial.println(String(battPercent));
+  //Serial.print("Battery %: ");
+  //Serial.println(String(battPercent));
   if (battPercent <= 100 && battPercent >= 75) {
     //Green
     blink(OFF, ON, OFF, OFF, ON, OFF);
