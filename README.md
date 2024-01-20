@@ -45,6 +45,9 @@ LED animations: 15 - 40 mA.
 
 The components are small, so hand solder only if you like hand soldering 0402 passives.
 
+Digikey parts list:
+https://www.digikey.lv/en/mylists/list/89HW8EGBFQ
+
 
 Short video of it on my dog: https://youtube.com/shorts/czCEe3qOvLs
 
