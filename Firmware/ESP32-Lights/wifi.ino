@@ -294,7 +294,7 @@ void setupWifi() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     resetWiFiTimer();
     readBatteryValue();
-    String html = String(HTML1) + String(batteryPercentage) + String(HTML2) + String(ssid) + String(HTML3);
+    String html = String(HTML1) + String(readBatteryValue()) + String(HTML2) + String(ssid) + String(HTML3);
     request->send(200, "text/html", html);
   });
 
@@ -332,7 +332,7 @@ void setupWifi() {
       readPreferences();
     }
     // always respond to the client with something!
-    String html = String(HTML1) + String(batteryPercentage) + String(HTML2) + String(ssid) + String(HTML3);
+    String html = String(HTML1) + String(readBatteryValue()) + String(HTML2) + String(ssid) + String(HTML3);
     request->send(200, "text/html", html);
   });
 
