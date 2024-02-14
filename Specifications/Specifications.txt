@@ -1,6 +1,7 @@
 Power: Rechargable 370mAh 3.7V Li-Po battery
 Connections: USB 2.0(Type C), 2.4GHz WiFi AP
 2 RGB LEDs
+
 Ingress protection rating IP54
 https://clarionuk.com/resources/ip-ratings/
 Operating temperature range: -20 °C to 40 °C
