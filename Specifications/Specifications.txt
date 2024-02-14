@@ -36,4 +36,4 @@ WHITE pulsing: 15-30mA
 FLIP FLOP 25mA
 
 Pricing:
-19.99 Eur
+29.99 Eur
