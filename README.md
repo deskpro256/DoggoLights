@@ -58,3 +58,10 @@ Animating: https://youtu.be/XCs5S-U5Ewk
 Another one: https://youtu.be/2sCqAeW33wY
 
 Simple introduction: https://youtu.be/YiX_pth269Q
+
+
+Assembling and enclosure preparation
+
+I've designed the PCB for this case, so it only goes in one way. The button is located in the "screw" side of the case. The button needs an 8mm hole in the middle of the enclosures side, drill it with the case screwed together.
+
+For the USB hole I first needed to cut all of the inside plastic posts and nubs as I'm using all of the vertical space and it goes together as a big sandwich. Then I place the PCB inside and mark the USB connector from the outside, then drill out multiple holes and finish the hole using a mini file and a knife if needed. Then add the battery on the bottom side, button cover,, PCB and fold the wires so the case can close, screw it shut and then add the USB silicone cover in the hole first, then fold it over and glue it to the case using the double sided tape it has.
