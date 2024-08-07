@@ -364,7 +364,9 @@ void flipFlop(RGB rgb1, RGB rgb2) {
   int led2State = LOW;  // ledState used to set the LED
   allOff();
   while (running) {
-    checkWiFiTimer();
+    if (wifiRunning) {
+      checkWiFiTimer();
+    }
     button.tick();
     if (clicked) {
       clicked = false;
