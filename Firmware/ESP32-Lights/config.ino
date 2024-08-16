@@ -1,8 +1,15 @@
 void readPreferences() {
   preferences.begin("DogLights", true);
-
-  ssid = preferences.getString("ssid", "DogLights");
+  String defaultSsid = "DogLights-" + getMacLastHalf();
+  ssid = preferences.getString("ssid", defaultSsid);
   password = preferences.getString("password", "");
+
+  currentFirmwareVersion = preferences.getString("firmwareVersion", currentFirmwareVersion);
+
+  homeWifiSet = preferences.getBool("homeWifiSet", false);
+
+  homeSsid = preferences.getString("homeSsid", "HomeNetworkName");
+  homePass = preferences.getString("homePassword", "");
 
   preset1Effect = preferences.getInt("pre1Eff", 1);
   preset1Color1 = preferences.getDouble("pre1Col1", 0);
@@ -19,10 +26,38 @@ void readPreferences() {
   preferences.end();
 }
 
-void writeDevPreferences(String name, String pass) {
+void writeDeviceApPreferences(String name, String pass) {
   preferences.begin("DogLights", false);
   preferences.putString("ssid", name);
   preferences.putString("password", pass);
+  preferences.end();
+}
+
+void writeDeviceHomeWiFiPreferences(String homeName, String homePass) {
+  preferences.begin("DogLights", false);
+  preferences.putString("homeSsid", homeName);
+  preferences.putString("homePassword", homePass);
+  preferences.putBool("homeWifiSet", homeWifiSet);
+  preferences.end();
+}
+
+void readDeviceHomeWiFiPreferences(){
+  preferences.begin("DogLights", true);
+  homeWifiSet = preferences.getBool("homeWifiSet", false);
+  homeSsid = preferences.getString("homeSsid", "HomeNetworkName");
+  homePass = preferences.getString("homePassword", "");
+  preferences.end();
+}
+
+void writeDeviceFirmwarePreferences(String fwVersion) {
+  preferences.begin("DogLights", false);
+  preferences.putString("firmwareVersion", fwVersion);
+  preferences.end();
+}
+
+void readDeviceFirmwarePreferences() {
+  preferences.begin("DogLights", true);
+  preferences.getString("firmwareVersion", currentFirmwareVersion);
   preferences.end();
 }
 
@@ -43,5 +78,11 @@ void writeLEDConfig(int preset, int effect, double colorHue1, double colorHue2) 
     preferences.putDouble("pre3Col1", colorHue1);
     preferences.putDouble("pre3Col2", colorHue2);
   }
+  preferences.end();
+}
+
+void clearPreferences() {
+  preferences.begin("DogLights", false);
+  preferences.clear();
   preferences.end();
 }

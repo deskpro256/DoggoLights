@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>DoggyLights</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body {
+            font-family: Trebuchet MS;
+            text-align: center;
+            color: #e7e8eb;
+            background-color: #1b1b1b;
+        }
+
+        /* Style the tab */
+        .tab {
+            overflow: hidden;
+            border: 1px solid #eee;
+            color: #363636;
+            background-color: #121212;
+        }
+
+        form {
+            display: inline-block;
+        }
+
+        input[type="submit"] {
+            background-color: #04aa6d;
+            border: none;
+            color: white;
+            padding: 16px 32px;
+            text-decoration: none;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+
+        /* Style the buttons inside the tab */
+        .tab button {
+            background-color: inherit;
+            color: #eee;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            width: 50%;
+            padding: 14px;
+            transition: 0.3s;
+            font-size: 17px;
+        }
+
+        /* Change background color of buttons on hover */
+        .tab button:hover {
+            background-color: #3d3d3d;
+            color: #eee;
+        }
+
+        /* Create an active/current tablink class */
+        .tab button.active {
+            background-color: #282828;
+            color: #eee;
+        }
+
+        /* Style the tab content */
+        .tabcontent {
+            display: none;
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-top: none;
+        }
+
+        .spectrum {
+            display: flex;
+            width: 80vw;
+            height: 30px;
+            margin: 0 0 -3px 7px;
+        }
+
+        .color-stop {
+            flex: 1;
+            height: 100%;
+        }
+
+        input[type="range"] {
+            width: 82vw;
+            margin-top: -5px;
+        }
+
+        .color-display {
+            width: 80vw;
+            height: 50px;
+            margin: 10px 7px;
+            border: 1px solid #000;
+        }
+
+        .led-button {
+            width: 50px;
+            height: 50px;
+            margin: 20px;
+            border: none;
+            cursor: pointer;
+            border-radius: 80%;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+
+<body>
+    <h3>Dog light configurator</h3>
+    <p>Battery: 69%</p>
+    <div class="tab">
+        <button class="tablinks" onclick="openTab(event, 'Lights')" id="defaultOpen">Lights</button>
+        <button class="tablinks" onclick="openTab(event, 'Device')">Device</button>
+    </div>
+    <div id="Lights" class="tabcontent">
+        <div id="ledContainer">
+            <button id="led1" class="led-button" onclick="selectLED(1)" style="background-color: hsl(0, 100%, 50%);"></button>
+            <button id="led2" class="led-button" onclick="selectLED(2)" style="background-color: hsl(0, 100%, 50%);"></button>
+        </div>
+        <br />
+        <form action="/get">
+            <br />
+            <label for="preset">Preset:</label>
+            <select id="preset" name="preset">
+                <option value="0">Preset 1</option>
+                <option value="1">Preset 2</option>
+                <option value="2">Preset 3</option>
+            </select>
+            <br />
+            <br />
+            <label for="effect">Effect:</label>
+            <select id="effect" name="effect" onchange="effectChange()">
+                <option value="1">Static</option>
+                <option value="2">Breathing</option>
+                <option value="3">FlipFlop</option>
+                <option value="4">Rainbow</option>
+            </select>
+            <br />
+            <br />
+            <div id="colorInputs">
+                <input type="checkbox" id="bothLEDsCheck" onclick="sameLEDSliders()" /> Both LEDs same color.
+                <p>LED Color:</p>
+                <div class="spectrum">
+                    <div class="color-stop" style="background-color: hsl(0, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(15, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(30, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(45, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(60, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(75, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(90, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(105, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(120, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(135, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(150, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(165, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(180, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(195, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(210, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(225, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(240, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(255, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(270, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(285, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(300, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(315, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(330, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(345, 100%, 50%);"></div>
+                    <div class="color-stop" style="background-color: hsl(360, 100%, 50%);"></div>
+                </div>
+                <input name="colorInput1" id="colorInput1" type="range" min="0" max="360" step="15" value="0" oninput="updateSelectedLEDColor()" />
+                <input name="colorInput2" id="colorInput2" type="range" min="0" max="360" step="15" value="0" oninput="updateSelectedLEDColor()" style="display: none;" />
+            </div>
+            <br />
+            <input id="save" type="submit" value="Save" />
+        </form>
+    </div>
+    <div id="Device" class="tabcontent">
+        <p>Change the device name and password. This will restart the device. You'll need to connect again using the new
+            credentials.</p>
+        <form action="/get">
+            <label for="devicename">Device name: </label>
+            <br />
+            <input type="text" name="devicename" placeholder="DoggyLights" required />
+            <br />
+            <br />
+            <label for="password">Password: </label>
+			<input type="checkbox" onclick="showPassword(1)" /> Show
+            <br />
+            <input type="password" name="password" id="passInput1" placeholder="Password" required />
+            <br />
+            <br />
+            <input type="submit" value="Save" />
+        </form>
+		<br/>
+		<br/>
+		<br/>
+		<p>Firmware version: v1.0.2</p>
+		<br/>
+        <p>Input your home network name and password if you want to check for firmware updates.</p>
+		<p>The device will try to connect to your home network, check for a new FW version and update if necessary.</p>
+		<br/>
+		<input type="checkbox" id="showWifiCheckbox" onclick="showHomeWifiForm()" /> Change home WiFi credentials.
+		<br/>
+		<br/>
+		<div id="homeSsidDiv" style="display: none;">
+        <form action="/get">
+            <label for="homeSsid">Home network name: </label>
+            <br />
+            <input type="text" name="homeSsid" placeholder="HomeNetwork" required />
+            <br />
+            <br />
+            <label for="homePassword">Password: </label>
+			<input type="checkbox" onclick="showPassword(2)" /> Show
+            <br />
+            <input type="password" name="homePassword" id="passInput2" placeholder="Password" required />
+            <br />
+            <br />
+            <input type="submit" value="Save" />
+        </form>
+		</div>
+            <br />
+        <form action="/get">
+            <input type="submit" value="Update" name="update"/>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById("defaultOpen").click();
+        let selectedLED = 1;
+		selectLED(selectedLED);
+        let flipFlopInterval, breathingInterval, rainbowInterval;
+		
+
+        function openTab(evt, tabName) {
+            const tabcontent = document.getElementsByClassName("tabcontent");
+            for (let i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            const tablinks = document.getElementsByClassName("tablinks");
+            for (let i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+		function showPassword(passInput) {
+			if (passInput == 1){
+				var x = document.getElementById("passInput1");
+			} else {
+				var x = document.getElementById("passInput2");
+			}
+			if (x.type === "password") {
+				x.type = "text";
+			} else {
+				x.type = "password";
+			}
+		}
+		function showHomeWifiForm(){
+			var x = document.getElementById("homeSsidDiv");
+			var checkbox = document.getElementById("showWifiCheckbox");
+			if (checkbox.checked) {
+				x.style.display = "block";
+			} else {
+				x.style.display = "none";
+			}
+		}
+
+        function selectLED(ledNumber) {
+            const led1 = document.getElementById('led1');
+            const led2 = document.getElementById('led2');
+            selectedLED = ledNumber;
+            if (selectedLED === 1) {
+				led1.style.border = "3px solid #e7e7e7"
+				led2.style.border = ""
+                document.getElementById('colorInput1').style.display = 'block';
+                document.getElementById('colorInput2').style.display = 'none';
+            } else {
+				led2.style.border = "3px solid #e7e7e7"
+				led1.style.border = ""
+                document.getElementById('colorInput2').style.display = 'block';
+                document.getElementById('colorInput1').style.display = 'none';
+            }
+            updateSliderValue();
+        }
+
+        function updateSliderValue() {
+            const colorInput1 = document.getElementById('colorInput1');
+            const colorInput2 = document.getElementById('colorInput2');
+            const bothSameColor = document.getElementById('bothLEDsCheck').checked;
+
+            if (bothSameColor) {
+                colorInput2.value = colorInput1.value;
+            } else {
+                if (selectedLED === 1) {
+                    colorInput1.value = colorInput1.value; // Set slider to LED1's value
+                } else {
+                    colorInput2.value = colorInput2.value; // Set slider to LED2's value
+                }
+            }
+        }
+
+        function updateSelectedLEDColor() {
+            const colorInput1 = document.getElementById('colorInput1');
+            const colorInput2 = document.getElementById('colorInput2');
+            const bothSameColor = document.getElementById('bothLEDsCheck').checked;
+            const led1 = document.getElementById('led1');
+            const led2 = document.getElementById('led2');
+
+            if (bothSameColor) {
+                colorInput2.value = colorInput1.value;
+                led1.style.backgroundColor = `hsl(${colorInput1.value}, 100%, 50%)`;
+                led2.style.backgroundColor = `hsl(${colorInput1.value}, 100%, 50%)`;
+            } else {
+                if (selectedLED === 1) {
+                    led1.style.backgroundColor = `hsl(${colorInput1.value}, 100%, 50%)`;
+                } else {
+                    led2.style.backgroundColor = `hsl(${colorInput2.value}, 100%, 50%)`;
+                }
+            }
+        }
+
+        function effectChange() {
+            const effect = document.getElementById("effect").value;
+            const colorInputs = document.getElementById("colorInputs");
+            const led1 = document.getElementById('led1');
+            const led2 = document.getElementById('led2');
+			selectLED(selectedLED);
+
+            led1.style.opacity = 1;
+            led2.style.opacity = 1;
+
+            clearInterval(flipFlopInterval);
+            clearInterval(breathingInterval);
+            clearInterval(rainbowInterval);
+
+            if (effect === "2") { // Breathing effect
+                colorInputs.style.display = "block";
+                startBreathingEffect();
+            } else if (effect === "3") { // FlipFlop effect
+                colorInputs.style.display = "block";
+                startFlipFlopEffect();
+            } else if (effect === "4") { // Rainbow effect
+                colorInputs.style.display = "none";
+                startRainbowEffect();
+            } else {
+                colorInputs.style.display = "block";
+            }
+        }
+
+        function sameLEDSliders() {
+            const bothSameColor = document.getElementById('bothLEDsCheck').checked;
+            const colorInput1 = document.getElementById('colorInput1');
+            const colorInput2 = document.getElementById('colorInput2');
+
+            if (bothSameColor) {
+                document.getElementById('colorInput1').style.display = 'block';
+                document.getElementById('colorInput2').style.display = 'none';
+                colorInput2.value = colorInput1.value; // Ensure colorInput2 matches colorInput1 when bothSameColor is checked
+            }
+            updateLEDColors();
+        }
+
+        function updateLEDColors() {
+            const colorInput1 = document.getElementById('colorInput1').value;
+            const colorInput2 = document.getElementById('colorInput2').value;
+            const colorHSL1 = `hsl(${colorInput1}, 100%, 50%)`;
+            const colorHSL2 = `hsl(${colorInput2}, 100%, 50%)`;
+            const bothSameColor = document.getElementById('bothLEDsCheck').checked;
+            const led1 = document.getElementById('led1');
+            const led2 = document.getElementById('led2');
+			let tempColorInput1 = 0;
+
+            if (bothSameColor) {
+                led1.style.backgroundColor = colorHSL1;
+                led2.style.backgroundColor = colorHSL1;
+                document.getElementById('colorInput2').value = colorInput1; // Ensure colorInput2 matches colorInput1 when bothSameColor is checked
+            } else {
+                if (selectedLED === 1) {
+                    led1.style.backgroundColor = colorHSL1;
+                } else {
+                    led2.style.backgroundColor = colorHSL2;
+                }
+            }
+        }
+
+        function startBreathingEffect() {
+            const led1 = document.getElementById('led1');
+            const led2 = document.getElementById('led2');
+            let opacity = 0;
+            let increasing = true;
+
+            breathingInterval = setInterval(() => {
+                if (increasing) {
+                    opacity += 0.05;
+                    if (opacity >= 1) {
+                        increasing = false;
+                    }
+                } else {
+                    opacity -= 0.05;
+                    if (opacity <= 0) {
+                        increasing = true;
+                    }
+                }
+                led1.style.opacity = opacity;
+                led2.style.opacity = opacity;
+            }, 100); // Adjust the interval and increment for a smoother effect
+        }
+
+        function startFlipFlopEffect() {
+            const led1 = document.getElementById('led1');
+            const led2 = document.getElementById('led2');
+            let led1State = true;
+
+            flipFlopInterval = setInterval(() => {
+                if (led1State) {
+                    led1.style.opacity = 1;
+                    led2.style.opacity = 0;
+                } else {
+                    led1.style.opacity = 0;
+                    led2.style.opacity = 1;
+                }
+                led1State = !led1State;
+            }, 300); // Adjust the interval as needed
+        }
+
+        function startRainbowEffect() {
+            const led1 = document.getElementById('led1');
+            const led2 = document.getElementById('led2');
+
+            rainbowInterval = setInterval(() => {
+                let rainbow = (Date.now() / 50) % 360;
+                const rainbowColor = `hsl(${rainbow}, 100%, 50%)`;
+				led1.style.border = ""
+				led2.style.border = ""
+                led1.style.backgroundColor = rainbowColor;
+                led2.style.backgroundColor = rainbowColor;
+            }, 25); // Adjust the interval as needed
+        }
+
+    </script>
+</body>
+
+</html>

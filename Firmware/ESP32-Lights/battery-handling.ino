@@ -8,9 +8,9 @@ int readBatteryValue() {
   Serial.println(String(voltage));
   batteryPercentage = map(voltage, 3.0, 4.2, 0, 100);
   batteryPercentage = constrain(batteryPercentage, 0, 100);
-  Serial.print("Batt %: ");
+  Serial.print("Batt % ");
   Serial.println(String(batteryPercentage));
-  
+
   return batteryPercentage;
 }
 
@@ -35,5 +35,12 @@ void blinkBateryPercentColor(int battPercent) {
   } else if (battPercent <= 24 && battPercent >= 0) {
     //Red
     blink(ON, OFF, OFF, ON, OFF, OFF);
+  }
+}
+
+void checkForLowBatteryShutdown(int battPerc) {
+  if (battPerc <= 5) {
+    blinkBateryPercentColor(battPerc);
+    running = false;
   }
 }

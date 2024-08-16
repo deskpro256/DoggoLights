@@ -2,7 +2,7 @@ void preset1() {
   button.tick();
   RGB rgb1 = hslToRgb(preset1Color1);
   RGB rgb2 = hslToRgb(preset1Color2);
-  checkWiFiTimer();
+  checkWiFiAPTimer();
   button.tick();
   switch (preset1Effect) {
     case 1:
@@ -25,7 +25,7 @@ void preset2() {
   button.tick();
   RGB rgb1 = hslToRgb(preset2Color1);
   RGB rgb2 = hslToRgb(preset2Color2);
-  checkWiFiTimer();
+  checkWiFiAPTimer();
   button.tick();
   switch (preset2Effect) {
     case 1:
@@ -47,7 +47,7 @@ void preset3() {
   button.tick();
   RGB rgb1 = hslToRgb(preset3Color1);
   RGB rgb2 = hslToRgb(preset3Color2);
-  checkWiFiTimer();
+  checkWiFiAPTimer();
   button.tick();
   switch (preset3Effect) {
     case 1:
@@ -68,7 +68,7 @@ void preset3() {
 
 void staticColor(RGB rgb1, RGB rgb2) {
   while (running) {
-    checkWiFiTimer();
+    checkWiFiAPTimer();
     button.tick();
     if (clicked) {
       clicked = false;
@@ -173,7 +173,7 @@ void solidPulsing(bool r1, bool g1, bool b1, bool r2, bool g2, bool b2) {  //RGB
   button.tick();
   allOff();
   button.tick();
-  checkWiFiTimer();
+  checkWiFiAPTimer();
   button.tick();
   for (int dutyCycle = 255; dutyCycle >= 0; dutyCycle--) {
 
@@ -247,7 +247,7 @@ void allOff() {
 }
 
 void rainbow() {
-  checkWiFiTimer();
+  checkWiFiAPTimer();
   button.tick();
   RGB rgb1;
   int i;
@@ -295,7 +295,7 @@ void rainbow() {
 }
 
 void breathing(RGB rgb1, RGB rgb2) {
-  checkWiFiTimer();
+  checkWiFiAPTimer();
   button.tick();
   int r1 = invertPwmSignal(rgb1.r);
   int g1 = invertPwmSignal(rgb1.g);
@@ -365,7 +365,7 @@ void flipFlop(RGB rgb1, RGB rgb2) {
   allOff();
   while (running) {
     if (wifiRunning) {
-      checkWiFiTimer();
+      checkWiFiAPTimer();
     }
     button.tick();
     if (clicked) {
