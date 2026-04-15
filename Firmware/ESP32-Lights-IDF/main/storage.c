@@ -12,7 +12,7 @@ static const char *TAG = "storage";
 
 static void set_defaults(device_config_t *cfg) {
     memset(cfg, 0, sizeof(*cfg));
-    snprintf(cfg->ap_ssid, sizeof(cfg->ap_ssid), "DogLights");
+    snprintf(cfg->ap_ssid, sizeof(cfg->ap_ssid), "DoggoLights");
     cfg->ap_pass[0] = '\0';
     snprintf(cfg->firmware_version, sizeof(cfg->firmware_version), "2.0.0");
     snprintf(cfg->ota_url, sizeof(cfg->ota_url), "%s", DL_DEFAULT_OTA_URL);
@@ -106,6 +106,16 @@ void storage_save_config(const device_config_t *cfg) {
 
     ESP_ERROR_CHECK(nvs_commit(nvs));
     nvs_close(nvs);
+}
+
+void storage_factory_reset(device_config_t *cfg_out) {
+    device_config_t cfg;
+    set_defaults(&cfg);
+    storage_save_config(&cfg);
+
+    if (cfg_out) {
+        *cfg_out = cfg;
+    }
 }
 
 bool storage_load_mfg_passed(void) {

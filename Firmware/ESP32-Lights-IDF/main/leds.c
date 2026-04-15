@@ -24,6 +24,7 @@ static bool s_manual_led2_enabled;
 static int s_manual_led1_hue;
 static int s_manual_led2_hue;
 static volatile int s_ap_signal;
+static volatile int s_error_signal;
 
 static int invert_pwm(int value) {
     if (value < 0) value = 0;
@@ -114,6 +115,10 @@ void leds_signal_ap_status(bool enabled) {
     s_ap_signal = enabled ? 1 : 2;
 }
 
+void leds_signal_error(void) {
+    s_error_signal = 1;
+}
+
 void leds_set_power(bool on) {
     s_power_on = on;
     if (!on) {
@@ -176,6 +181,12 @@ static void led_task(void *arg) {
                 // AP off: LED1 blue, LED2 red, double flash.
                 blink_color((rgb_t){0, 0, 255}, (rgb_t){255, 0, 0}, 2, 120);
             }
+        }
+
+        if (s_error_signal != 0) {
+            s_error_signal = 0;
+            // Error indication: both LEDs red, double flash.
+            blink_color((rgb_t){255, 0, 0}, (rgb_t){255, 0, 0}, 2, 120);
         }
 
         if (!s_power_on || !st.powered_on) {

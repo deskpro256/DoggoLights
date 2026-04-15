@@ -21,6 +21,7 @@
 
 static const char *TAG = "web";
 static const char *HOST_HINT = "doggylights.local";
+static const int AP_RESTART_GRACE_MS = 1000;
 
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAILED_BIT BIT1
@@ -39,6 +40,12 @@ typedef struct {
     char password[65];
     char url[256];
 } ota_sequence_request_t;
+
+typedef struct {
+    bool on;
+} ap_toggle_request_t;
+
+static void ap_restart_task(void *arg);
 
 static size_t copy_bounded(char *dst, size_t dst_size, const char *src) {
     size_t n;
@@ -109,10 +116,12 @@ static void touch_activity(void) {
 }
 
 static void build_runtime_ap_ssid(const char *base_ssid, char *out, size_t out_size) {
+    static const char *k_default_ssid = "DoggoLights";
     uint8_t mac[6] = {0};
     char suffix[7] = {0};
     size_t suffix_len;
     size_t base_max;
+    bool append_suffix;
 
     if (!out || out_size == 0) {
         return;
@@ -121,7 +130,14 @@ static void build_runtime_ap_ssid(const char *base_ssid, char *out, size_t out_s
     out[0] = '\0';
 
     if (!base_ssid || base_ssid[0] == '\0') {
-        base_ssid = "DogLights";
+        base_ssid = k_default_ssid;
+    }
+
+    // Only append MAC suffix for the default SSID.
+    append_suffix = (strcmp(base_ssid, k_default_ssid) == 0);
+    if (!append_suffix) {
+        copy_bounded(out, out_size, base_ssid);
+        return;
     }
 
     if (esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP) != ESP_OK) {
@@ -333,6 +349,12 @@ static esp_err_t device_post(httpd_req_t *req) {
     char q[768] = {0};
     char value[256];
     bool changed = false;
+    bool ap_settings_changed = false;
+    bool ap_ssid_changed = false;
+    bool ap_pass_changed = false;
+    bool home_ssid_changed = false;
+    bool home_pass_changed = false;
+    bool ota_url_changed = false;
     device_config_t cfg;
 
     touch_activity();
@@ -345,23 +367,45 @@ static esp_err_t device_post(httpd_req_t *req) {
     app_state_get_config(&cfg);
 
     if (query_value_decoded(q, "ap_ssid", value, sizeof(value))) {
+        if (strcmp(cfg.ap_ssid, value) != 0) {
+            ap_settings_changed = true;
+            ap_ssid_changed = true;
+        }
         copy_bounded(cfg.ap_ssid, sizeof(cfg.ap_ssid), value);
         changed = true;
     }
     if (query_value_decoded(q, "ap_pass", value, sizeof(value))) {
+        size_t ap_pass_len = strlen(value);
+        if (ap_pass_len > 0 && ap_pass_len < 8) {
+            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "AP password must be empty (open AP) or at least 8 characters");
+            return ESP_FAIL;
+        }
+        if (strcmp(cfg.ap_pass, value) != 0) {
+            ap_settings_changed = true;
+            ap_pass_changed = true;
+        }
         copy_bounded(cfg.ap_pass, sizeof(cfg.ap_pass), value);
         changed = true;
     }
     if (query_value_decoded(q, "home_ssid", value, sizeof(value))) {
+        if (strcmp(cfg.home_ssid, value) != 0) {
+            home_ssid_changed = true;
+        }
         copy_bounded(cfg.home_ssid, sizeof(cfg.home_ssid), value);
         cfg.home_wifi_set = cfg.home_ssid[0] != '\0';
         changed = true;
     }
     if (query_value_decoded(q, "home_pass", value, sizeof(value))) {
+        if (strcmp(cfg.home_pass, value) != 0) {
+            home_pass_changed = true;
+        }
         copy_bounded(cfg.home_pass, sizeof(cfg.home_pass), value);
         changed = true;
     }
     if (query_value_decoded(q, "ota_url", value, sizeof(value))) {
+        if (strcmp(cfg.ota_url, value) != 0) {
+            ota_url_changed = true;
+        }
         copy_bounded(cfg.ota_url, sizeof(cfg.ota_url), value);
         changed = true;
     }
@@ -372,7 +416,60 @@ static esp_err_t device_post(httpd_req_t *req) {
 
     app_state_set_config(&cfg);
     storage_save_config(&cfg);
-    return send_json(req, "{\"ok\":true,\"message\":\"saved\"}");
+    ESP_LOGI(
+        TAG,
+        "API /api/device saved (ap_ssid=%s, ap_pass=%s, home_ssid=%s, home_pass=%s, ota_url=%s)",
+        ap_ssid_changed ? "changed" : "same",
+        ap_pass_changed ? "changed" : "same",
+        home_ssid_changed ? "changed" : "same",
+        home_pass_changed ? "changed" : "same",
+        ota_url_changed ? "changed" : "same"
+    );
+
+    if (ap_settings_changed && s_ap_running) {
+        if (xTaskCreate(ap_restart_task, "ap_restart", 4096, NULL, 4, NULL) != pdPASS) {
+            ESP_LOGW(TAG, "Could not start AP restart task after AP settings change");
+        } else {
+            ESP_LOGI(TAG, "AP settings changed. Restarting AP to apply new SSID/password.");
+        }
+    }
+
+    esp_err_t err = send_json(req, "{\"ok\":true,\"message\":\"saved\"}");
+    if (err != ESP_OK) {
+        // Settings are already persisted at this point. If the browser drops
+        // connection (e.g. AP/client transition), treat it as non-fatal.
+        ESP_LOGW(TAG, "Client disconnected before save response was delivered");
+        return ESP_OK;
+    }
+    return ESP_OK;
+}
+
+static esp_err_t factory_reset_post(httpd_req_t *req) {
+    touch_activity();
+
+    device_config_t cfg;
+    bool ap_was_running = s_ap_running;
+    storage_factory_reset(&cfg);
+    app_state_set_config(&cfg);
+    leds_set_active_preset(0);
+
+    build_runtime_ap_ssid(cfg.ap_ssid, s_ap_runtime_ssid, sizeof(s_ap_runtime_ssid));
+    ESP_LOGW(TAG, "Factory reset applied. AP base restored and user credentials cleared.");
+
+    if (ap_was_running) {
+        if (xTaskCreate(ap_restart_task, "ap_restart", 4096, NULL, 4, NULL) != pdPASS) {
+            ESP_LOGW(TAG, "Could not start AP restart task after factory reset");
+        } else {
+            ESP_LOGI(TAG, "Factory reset: restarting AP to apply default SSID/password");
+        }
+    }
+
+    esp_err_t err = send_json(req, "{\"ok\":true,\"message\":\"factory_reset\"}");
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Client disconnected before factory reset response was delivered");
+        return ESP_OK;
+    }
+    return ESP_OK;
 }
 
 static esp_err_t ota_post(httpd_req_t *req) {
@@ -395,11 +492,14 @@ static esp_err_t ota_post(httpd_req_t *req) {
     }
 
     if (!cfg.home_wifi_set || !cfg.home_ssid[0]) {
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Home Wi-Fi settings are required for OTA");
-        return ESP_FAIL;
+        leds_signal_error();
+        ESP_LOGW(TAG, "OTA rejected: home Wi-Fi settings are required");
+        httpd_resp_set_status(req, "400 Bad Request");
+        return send_json(req, "{\"ok\":false,\"error\":\"home_wifi_required\",\"message\":\"Home Wi-Fi settings are required for OTA\"}");
     }
 
     if (s_ota_sequence_running) {
+        leds_signal_error();
         httpd_resp_set_status(req, "409 Conflict");
         httpd_resp_set_type(req, "application/json");
         httpd_resp_sendstr(req, "{\"ok\":false,\"error\":\"ota_already_running\"}");
@@ -408,6 +508,7 @@ static esp_err_t ota_post(httpd_req_t *req) {
 
     request = calloc(1, sizeof(*request));
     if (!request) {
+        leds_signal_error();
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Could not allocate OTA request");
         return ESP_FAIL;
     }
@@ -420,6 +521,7 @@ static esp_err_t ota_post(httpd_req_t *req) {
     if (xTaskCreate(ota_sequence_task, "ota_sequence", 6144, request, 4, NULL) != pdPASS) {
         s_ota_sequence_running = false;
         free(request);
+        leds_signal_error();
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Could not start OTA sequence");
         return ESP_FAIL;
     }
@@ -434,6 +536,43 @@ static esp_err_t captive_redirect_get(httpd_req_t *req) {
     return httpd_resp_send(req, NULL, 0);
 }
 
+static void ap_toggle_task(void *arg) {
+    ap_toggle_request_t *req = (ap_toggle_request_t *)arg;
+    bool want_on = req && req->on;
+
+    if (req) {
+        free(req);
+    }
+
+    // Give HTTP response a moment to leave before tearing down the server.
+    vTaskDelay(pdMS_TO_TICKS(60));
+    ESP_LOGI(TAG, "AP toggle task executing: target=%s", want_on ? "ON" : "OFF");
+
+    if (want_on) {
+        web_server_start_ap();
+        leds_signal_ap_status(true);
+    } else {
+        web_server_stop_ap();
+        leds_signal_ap_status(false);
+    }
+
+    vTaskDelete(NULL);
+}
+
+static void ap_restart_task(void *arg) {
+    (void)arg;
+
+    // Give HTTP response/poll requests time to settle before disconnecting clients.
+    vTaskDelay(pdMS_TO_TICKS(AP_RESTART_GRACE_MS));
+    ESP_LOGI(TAG, "AP restart task executing");
+    web_server_stop_ap();
+    vTaskDelay(pdMS_TO_TICKS(250));
+    web_server_start_ap();
+    leds_signal_ap_status(true);
+
+    vTaskDelete(NULL);
+}
+
 void web_server_stop_ap(void) {
     if (s_server) {
         httpd_stop(s_server);
@@ -445,6 +584,7 @@ void web_server_stop_ap(void) {
         esp_wifi_set_mode(WIFI_MODE_NULL);
         s_ap_running = false;
         app_state_set_wifi_ap_running(false);
+        ESP_LOGI(TAG, "Config AP stopped");
     }
 }
 
@@ -453,15 +593,26 @@ static esp_err_t wifi_ap_post(httpd_req_t *req) {
 
     char q[32] = {0};
     char v[8] = {0};
+    bool want_on = false;
     if (httpd_req_get_url_query_str(req, q, sizeof(q)) == ESP_OK &&
         httpd_query_key_value(q, "on", v, sizeof(v)) == ESP_OK) {
-        if (atoi(v) == 0) {
-            web_server_stop_ap();
-            leds_signal_ap_status(false);
-        } else {
-            web_server_start_ap();
-            leds_signal_ap_status(true);
+        want_on = atoi(v) != 0;
+        ESP_LOGI(TAG, "API /api/wifi_ap request: on=%d", want_on ? 1 : 0);
+
+        ap_toggle_request_t *toggle_req = calloc(1, sizeof(*toggle_req));
+        if (!toggle_req) {
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Could not allocate AP toggle request");
+            return ESP_FAIL;
         }
+        toggle_req->on = want_on;
+
+        if (xTaskCreate(ap_toggle_task, "ap_toggle", 4096, toggle_req, 4, NULL) != pdPASS) {
+            free(toggle_req);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Could not start AP toggle task");
+            return ESP_FAIL;
+        }
+    } else {
+        ESP_LOGW(TAG, "API /api/wifi_ap called without valid on=<0|1> query");
     }
 
     return send_json(req, "{\"ok\":true}");
@@ -475,6 +626,17 @@ void web_server_start_ap(void) {
 
     device_config_t app_cfg;
     app_state_get_config(&app_cfg);
+
+    size_t ap_pass_len = strlen(app_cfg.ap_pass);
+    if (ap_pass_len > 0 && ap_pass_len < 8) {
+        // WPA2 AP passwords must be >=8 chars. Recover gracefully from any
+        // previously saved invalid value instead of crashing.
+        ESP_LOGW(TAG, "Invalid AP password length (%u). Falling back to open AP.", (unsigned)ap_pass_len);
+        app_cfg.ap_pass[0] = '\0';
+        app_state_set_config(&app_cfg);
+        storage_save_config(&app_cfg);
+    }
+
     build_runtime_ap_ssid(app_cfg.ap_ssid, s_ap_runtime_ssid, sizeof(s_ap_runtime_ssid));
 
     wifi_config_t wifi_cfg = {0};
@@ -499,6 +661,7 @@ void web_server_start_ap(void) {
     httpd_uri_t status = {.uri = "/api/status", .method = HTTP_GET, .handler = status_get, .user_ctx = NULL};
     httpd_uri_t preset = {.uri = "/api/preset", .method = HTTP_POST, .handler = preset_post, .user_ctx = NULL};
     httpd_uri_t device = {.uri = "/api/device", .method = HTTP_POST, .handler = device_post, .user_ctx = NULL};
+    httpd_uri_t factory_reset = {.uri = "/api/factory_reset", .method = HTTP_POST, .handler = factory_reset_post, .user_ctx = NULL};
     httpd_uri_t ota = {.uri = "/api/ota", .method = HTTP_POST, .handler = ota_post, .user_ctx = NULL};
     httpd_uri_t wifi_ap = {.uri = "/api/wifi_ap", .method = HTTP_POST, .handler = wifi_ap_post, .user_ctx = NULL};
     httpd_uri_t captive = {.uri = "/*", .method = HTTP_GET, .handler = captive_redirect_get, .user_ctx = NULL};
@@ -507,6 +670,7 @@ void web_server_start_ap(void) {
     httpd_register_uri_handler(s_server, &status);
     httpd_register_uri_handler(s_server, &preset);
     httpd_register_uri_handler(s_server, &device);
+    httpd_register_uri_handler(s_server, &factory_reset);
     httpd_register_uri_handler(s_server, &ota);
     httpd_register_uri_handler(s_server, &wifi_ap);
     httpd_register_uri_handler(s_server, &captive);

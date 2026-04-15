@@ -97,20 +97,29 @@ static void on_button(button_event_t event) {
     switch (event) {
         case BUTTON_EVENT_SINGLE:
             leds_next_preset();
+            {
+                runtime_state_t st;
+                app_state_get_runtime(&st);
+                ESP_LOGI(TAG, "Button SINGLE: switched to preset %d", st.active_preset + 1);
+            }
             break;
         case BUTTON_EVENT_DOUBLE:
             if (web_server_ap_running()) {
+                ESP_LOGI(TAG, "Button DOUBLE: stopping Config AP");
                 web_server_stop_ap();
                 leds_signal_ap_status(false);
             } else {
+                ESP_LOGI(TAG, "Button DOUBLE: starting Config AP");
                 web_server_start_ap();
                 leds_signal_ap_status(true);
             }
             break;
         case BUTTON_EVENT_LONG:
+            ESP_LOGI(TAG, "Button LONG: entering deep sleep");
             enter_sleep();
             break;
         default:
+            ESP_LOGW(TAG, "Button event unknown: %d", (int)event);
             break;
     }
 }
