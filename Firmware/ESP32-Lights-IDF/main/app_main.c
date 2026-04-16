@@ -80,16 +80,24 @@ static void ota_boot_confirm_if_pending(void) {
 }
 
 static void enter_sleep(void) {
-    web_server_stop_ap();
+    // Turn LEDs off immediately so the user sees instant feedback at the 4s mark
     leds_set_power(false);
+
+    web_server_stop_ap();
 
     runtime_state_t st;
     app_state_get_runtime(&st);
     st.powered_on = false;
     app_state_set_runtime(&st);
 
+    // LONG fires while the button is still held — wait for release so the
+    // GPIO wakeup trigger (LOW) doesn't fire the instant we enter deep sleep.
+    while (gpio_get_level(DL_BUTTON_GPIO) == 0) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    vTaskDelay(pdMS_TO_TICKS(50)); // debounce
+
     esp_deep_sleep_enable_gpio_wakeup(1ULL << DL_BUTTON_GPIO, ESP_GPIO_WAKEUP_GPIO_LOW);
-    vTaskDelay(pdMS_TO_TICKS(100));
     esp_deep_sleep_start();
 }
 
@@ -125,6 +133,21 @@ static void on_button(button_event_t event) {
 }
 
 void app_main(void) {
+    // If woken from deep sleep by the button, require it to be held for
+    // DL_WAKE_PRESS_MS (1 s) before booting. Accidental touches go back to sleep.
+    if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
+        gpio_set_pull_mode(DL_BUTTON_GPIO, GPIO_PULLUP_ONLY);
+        int64_t t0 = esp_timer_get_time() / 1000;
+        while ((esp_timer_get_time() / 1000 - t0) < DL_WAKE_PRESS_MS) {
+            if (gpio_get_level(DL_BUTTON_GPIO) != 0) {
+                // Released early — go back to deep sleep
+                esp_deep_sleep_enable_gpio_wakeup(1ULL << DL_BUTTON_GPIO, ESP_GPIO_WAKEUP_GPIO_LOW);
+                esp_deep_sleep_start();
+            }
+            vTaskDelay(pdMS_TO_TICKS(10));
+        }
+    }
+
     ota_boot_confirm_if_pending();
 
     app_state_init();

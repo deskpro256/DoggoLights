@@ -14,7 +14,9 @@
 #define DL_BAT_ADC_GPIO GPIO_NUM_3
 
 #define DL_AP_AUTO_OFF_MS (5 * 60 * 1000)
-#define DL_LONG_PRESS_MS 1000
+#define DL_SLEEP_PRESS_MS 3000  // hold this long while on to enter deep sleep
+#define DL_WAKE_PRESS_MS  1000  // must hold this long after wake to confirm power-on
+#define DL_LONG_PRESS_MS  DL_SLEEP_PRESS_MS  // legacy alias
 #define DL_DOUBLE_CLICK_MS 500
 
 #define DL_LED_EFFECT_TICK_MS 10

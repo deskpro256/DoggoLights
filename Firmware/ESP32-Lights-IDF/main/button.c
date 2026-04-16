@@ -34,6 +34,7 @@ static void button_task(void *arg) {
     int64_t press_start_ms = 0;
     int64_t last_release_ms = 0;
     int click_count = 0;
+    bool long_fired = false;
 
     while (1) {
         bool pressed = button_is_pressed();
@@ -41,19 +42,28 @@ static void button_task(void *arg) {
 
         if (pressed && !prev_pressed) {
             press_start_ms = now_ms;
+            long_fired = false;
         }
 
-        if (!pressed && prev_pressed) {
+        // Fire LONG while still held after DL_SLEEP_PRESS_MS (no release needed)
+        if (pressed && !long_fired) {
             int64_t held_ms = now_ms - press_start_ms;
-            if (held_ms >= DL_LONG_PRESS_MS) {
-                click_count = 0;
+            if (held_ms >= DL_SLEEP_PRESS_MS) {
+                long_fired = true;
+                click_count = 0;  // cancel any pending click
                 if (s_cb) {
                     s_cb(BUTTON_EVENT_LONG);
                 }
-            } else {
+            }
+        }
+
+        if (!pressed && prev_pressed) {
+            if (!long_fired) {
+                // Normal short release — count as click
                 click_count++;
                 last_release_ms = now_ms;
             }
+            // If long already fired, ignore the release
         }
 
         if (click_count > 0 && (now_ms - last_release_ms) > DL_DOUBLE_CLICK_MS) {
