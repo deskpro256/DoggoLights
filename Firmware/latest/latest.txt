@@ -1,2 +1,2 @@
-version=2.1.0
+version=2.1.1
 url=https://raw.githubusercontent.com/deskpro256/DoggoLights/main/Firmware/latest/firmware.bin

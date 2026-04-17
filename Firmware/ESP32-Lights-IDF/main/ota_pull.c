@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #include "esp_crt_bundle.h"
 #include "esp_http_client.h"
@@ -12,6 +13,7 @@
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "leds.h"
 
 static const char *TAG = "ota_pull";
 static bool s_running;
@@ -54,6 +56,11 @@ static void trim_inplace(char *s) {
         end--;
     }
     *end = '\0';
+
+    // Drop UTF-8 BOM if present.
+    if ((unsigned char)s[0] == 0xEF && (unsigned char)s[1] == 0xBB && (unsigned char)s[2] == 0xBF) {
+        memmove(s, s + 3, strlen(s + 3) + 1);
+    }
 }
 
 static int parse_version_parts(const char *ver, int parts[4], int *count) {
@@ -67,6 +74,10 @@ static int parse_version_parts(const char *ver, int parts[4], int *count) {
     }
 
     snprintf(tmp, sizeof(tmp), "%s", ver);
+    trim_inplace(tmp);
+    if (tmp[0] == 'v' || tmp[0] == 'V') {
+        memmove(tmp, tmp + 1, strlen(tmp + 1) + 1);
+    }
     tok = strtok_r(tmp, ".", &saveptr);
     while (tok && i < 4) {
         int j;
@@ -114,6 +125,7 @@ static esp_err_t fetch_text(const char *url, char *out, size_t out_len) {
     };
     esp_http_client_handle_t client;
     int total = 0;
+    int status = 0;
 
     if (!url || !out || out_len < 2) {
         return ESP_ERR_INVALID_ARG;
@@ -126,6 +138,16 @@ static esp_err_t fetch_text(const char *url, char *out, size_t out_len) {
     }
 
     if (esp_http_client_open(client, 0) != ESP_OK) {
+        esp_http_client_cleanup(client);
+        return ESP_FAIL;
+    }
+
+    // Pull response headers so status code is available before body parsing.
+    (void)esp_http_client_fetch_headers(client);
+    status = esp_http_client_get_status_code(client);
+    if (status < 200 || status >= 300) {
+        ESP_LOGW(TAG, "Manifest fetch HTTP status %d from %s", status, url);
+        esp_http_client_close(client);
         esp_http_client_cleanup(client);
         return ESP_FAIL;
     }
@@ -200,22 +222,34 @@ static void parse_manifest(const char *text, char *out_version, size_t out_versi
     snprintf(buf, sizeof(buf), "%s", text ? text : "");
     line = strtok_r(buf, "\r\n", &saveptr);
     while (line) {
+        char *eq;
         trim_inplace(line);
         if (line[0] && line[0] != '#') {
-            if (strncmp(line, "version=", 8) == 0) {
-                snprintf(out_version, out_version_len, "%s", line + 8);
-                trim_inplace(out_version);
-            } else if (strncmp(line, "url=", 4) == 0) {
-                snprintf(out_url, out_url_len, "%s", line + 4);
-                trim_inplace(out_url);
+            eq = strchr(line, '=');
+            if (eq) {
+                *eq = '\0';
+                char *key = line;
+                char *val = eq + 1;
+                trim_inplace(key);
+                trim_inplace(val);
+                if (strcasecmp(key, "version") == 0) {
+                    snprintf(out_version, out_version_len, "%s", val);
+                } else if (strcasecmp(key, "url") == 0) {
+                    snprintf(out_url, out_url_len, "%s", val);
+                }
             } else if (!out_version[0]) {
+                // Backward-compatible one-line manifest: "2.1.0"
                 snprintf(out_version, out_version_len, "%s", line);
             } else if (!out_url[0]) {
+                // Backward-compatible second line as URL
                 snprintf(out_url, out_url_len, "%s", line);
             }
         }
         line = strtok_r(NULL, "\r\n", &saveptr);
     }
+
+    trim_inplace(out_version);
+    trim_inplace(out_url);
 }
 
 esp_err_t ota_pull_resolve_target(
@@ -261,7 +295,12 @@ esp_err_t ota_pull_resolve_target(
 
     parse_manifest(manifest_text, manifest_version, sizeof(manifest_version), manifest_bin_url, sizeof(manifest_bin_url));
     if (!manifest_version[0]) {
-        ESP_LOGW(TAG, "Manifest %s has no version, proceeding with direct OTA URL", manifest_url);
+        ESP_LOGW(
+            TAG,
+            "Manifest %s has no version (content preview: '%.80s'), proceeding with direct OTA URL",
+            manifest_url,
+            manifest_text
+        );
         return ESP_OK;
     }
 
@@ -296,14 +335,17 @@ static void ota_task(void *arg) {
         .http_config = &http_cfg,
     };
 
+    leds_set_ota_state(LEDS_OTA_STATE_IN_PROGRESS);
     ESP_LOGI(TAG, "Starting OTA from %s", s_url);
     esp_err_t err = esp_https_ota(&ota_cfg);
     if (err == ESP_OK) {
+        leds_set_ota_state(LEDS_OTA_STATE_SUCCESS);
         ESP_LOGI(TAG, "OTA success, restarting");
-        vTaskDelay(pdMS_TO_TICKS(500));
+        vTaskDelay(pdMS_TO_TICKS(800));
         esp_restart();
     }
 
+    leds_set_ota_state(LEDS_OTA_STATE_FAILED);
     ESP_LOGE(TAG, "OTA failed: %s", esp_err_to_name(err));
     s_running = false;
     vTaskDelete(NULL);
