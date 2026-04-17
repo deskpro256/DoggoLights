@@ -852,9 +852,8 @@
       document.getElementById('fwVersionText').textContent = s.firmware_version || '-';
       const hostHint = s.hostname_hint || 'doggolights.local';
       const staIp = s.sta_ip || '';
-      document.getElementById('networkAddressText').textContent = staIp
-        ? `${staIp} (${hostHint})`
-        : `AP mode (192.168.4.1) / ${hostHint}`;
+      const accessUrl = s.access_url || (staIp ? `http://${staIp}` : 'http://192.168.4.1');
+      document.getElementById('networkAddressText').textContent = `Open ${accessUrl} (mDNS: http://${hostHint})`;
       updateOtaButtonState();
 
       if (state.otaPending) {

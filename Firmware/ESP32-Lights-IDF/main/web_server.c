@@ -15,6 +15,9 @@
 #include "esp_wifi.h"
 #include "esp_mac.h"
 #include "freertos/event_groups.h"
+#include "freertos/task.h"
+#include "lwip/inet.h"
+#include "lwip/sockets.h"
 #include "mdns.h"
 #include "leds.h"
 #include "ota_pull.h"
@@ -33,10 +36,13 @@ static bool s_ota_sequence_running;
 static esp_netif_t *s_ap_netif;
 static esp_netif_t *s_sta_netif;
 static EventGroupHandle_t s_wifi_events;
+static TaskHandle_t s_captive_dns_task;
+static int s_captive_dns_sock = -1;
+static bool s_captive_dns_running;
 static char s_ap_runtime_ssid[33];
 static char s_sta_ip[16];
-static char s_mdns_hostname[32] = "doggolights";
-static char s_host_hint[40] = "doggolights.local";
+static char s_mdns_hostname[32] = "doggo";
+static char s_host_hint[40] = "doggo.local";
 static bool s_mdns_ready;
 
 typedef struct {
@@ -50,14 +56,193 @@ typedef struct {
 
 static void ap_restart_task(void *arg);
 static esp_err_t ensure_http_server_started(void);
+static void captive_dns_task(void *arg);
+static void captive_dns_start(void);
+static void captive_dns_stop(void);
+
+static uint32_t ap_ip4_addr_be(void) {
+    esp_netif_ip_info_t ip_info = {0};
+
+    if (s_ap_netif && esp_netif_get_ip_info(s_ap_netif, &ip_info) == ESP_OK) {
+        return ip_info.ip.addr;
+    }
+
+    return inet_addr("192.168.4.1");
+}
+
+static int dns_question_end(const uint8_t *packet, int len) {
+    int i = 12;
+
+    while (i < len) {
+        uint8_t lab_len = packet[i++];
+        if (lab_len == 0) {
+            break;
+        }
+        if ((lab_len & 0xC0) != 0) {
+            return -1;
+        }
+        i += lab_len;
+        if (i > len) {
+            return -1;
+        }
+    }
+
+    if (i + 4 > len) {
+        return -1;
+    }
+
+    return i + 4;
+}
+
+static int build_captive_dns_reply(const uint8_t *query, int qlen, uint8_t *reply, int rlen) {
+    int qend;
+    uint16_t qtype;
+    uint32_t ip_be;
+
+    if (qlen < 12 || rlen < 12) {
+        return -1;
+    }
+
+    qend = dns_question_end(query, qlen);
+    if (qend < 0 || qend > rlen) {
+        return -1;
+    }
+
+    memcpy(reply, query, qend);
+
+    // Transaction ID stays as-is; force a standard authoritative response.
+    reply[2] = 0x81;
+    reply[3] = 0x80;
+    reply[4] = 0x00;
+    reply[5] = 0x01;
+    reply[6] = 0x00;
+    reply[7] = 0x01;
+    reply[8] = 0x00;
+    reply[9] = 0x00;
+    reply[10] = 0x00;
+    reply[11] = 0x00;
+
+    qtype = ((uint16_t)query[qend - 4] << 8) | query[qend - 3];
+    if (qtype != 0x0001 && qtype != 0x00ff) {
+        // Return no answers for non-A/non-ANY queries.
+        reply[6] = 0x00;
+        reply[7] = 0x00;
+        return qend;
+    }
+
+    if (qend + 16 > rlen) {
+        return -1;
+    }
+
+    ip_be = ap_ip4_addr_be();
+
+    reply[qend + 0] = 0xC0;
+    reply[qend + 1] = 0x0C;
+    reply[qend + 2] = 0x00;
+    reply[qend + 3] = 0x01;
+    reply[qend + 4] = 0x00;
+    reply[qend + 5] = 0x01;
+    reply[qend + 6] = 0x00;
+    reply[qend + 7] = 0x00;
+    reply[qend + 8] = 0x00;
+    reply[qend + 9] = 0x3C;
+    reply[qend + 10] = 0x00;
+    reply[qend + 11] = 0x04;
+    memcpy(&reply[qend + 12], &ip_be, 4);
+
+    return qend + 16;
+}
+
+static void captive_dns_task(void *arg) {
+    (void)arg;
+
+    uint8_t query[512];
+    uint8_t reply[512];
+
+    while (s_captive_dns_running) {
+        struct sockaddr_in src = {0};
+        socklen_t src_len = sizeof(src);
+        int qlen = recvfrom(s_captive_dns_sock, query, sizeof(query), 0, (struct sockaddr *)&src, &src_len);
+        if (qlen <= 0) {
+            continue;
+        }
+
+        int rlen = build_captive_dns_reply(query, qlen, reply, sizeof(reply));
+        if (rlen > 0) {
+            (void)sendto(s_captive_dns_sock, reply, rlen, 0, (struct sockaddr *)&src, src_len);
+        }
+    }
+
+    s_captive_dns_task = NULL;
+    vTaskDelete(NULL);
+}
+
+static void captive_dns_start(void) {
+    struct sockaddr_in addr = {0};
+    struct timeval tv = {.tv_sec = 1, .tv_usec = 0};
+
+    if (s_captive_dns_running) {
+        return;
+    }
+
+    s_captive_dns_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if (s_captive_dns_sock < 0) {
+        ESP_LOGW(TAG, "Could not create captive DNS socket");
+        return;
+    }
+
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(53);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (bind(s_captive_dns_sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
+        ESP_LOGW(TAG, "Could not bind captive DNS socket on port 53");
+        close(s_captive_dns_sock);
+        s_captive_dns_sock = -1;
+        return;
+    }
+
+    (void)setsockopt(s_captive_dns_sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    s_captive_dns_running = true;
+
+    if (xTaskCreate(captive_dns_task, "captive_dns", 4096, NULL, 4, &s_captive_dns_task) != pdPASS) {
+        ESP_LOGW(TAG, "Could not start captive DNS task");
+        s_captive_dns_running = false;
+        close(s_captive_dns_sock);
+        s_captive_dns_sock = -1;
+        return;
+    }
+
+    ESP_LOGI(TAG, "Captive DNS started on UDP/53");
+}
+
+static void captive_dns_stop(void) {
+    if (!s_captive_dns_running) {
+        return;
+    }
+
+    s_captive_dns_running = false;
+    if (s_captive_dns_sock >= 0) {
+        close(s_captive_dns_sock);
+        s_captive_dns_sock = -1;
+    }
+
+    ESP_LOGI(TAG, "Captive DNS stopped");
+}
 
 static bool ota_is_busy(void) {
     return s_ota_sequence_running || ota_pull_is_running();
 }
 
 static void build_mdns_hostname(void) {
-    snprintf(s_mdns_hostname, sizeof(s_mdns_hostname), "doggolights");
-    snprintf(s_host_hint, sizeof(s_host_hint), "doggolights.local");
+    snprintf(s_mdns_hostname, sizeof(s_mdns_hostname), "doggo");
+    snprintf(s_host_hint, sizeof(s_host_hint), "doggo.local");
+}
+
+static void reset_mdns_service(void) {
+    if (s_mdns_ready) {
+        mdns_free();
+        s_mdns_ready = false;
+    }
 }
 
 static void ensure_mdns_service(void) {
@@ -74,6 +259,7 @@ static void ensure_mdns_service(void) {
         mdns_instance_name_set("DoggoLights") != ESP_OK ||
         mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0) != ESP_OK) {
         ESP_LOGW(TAG, "mDNS setup failed");
+        mdns_free();
         return;
     }
 
@@ -199,8 +385,31 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         return;
     }
 
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_AP_START) {
+        reset_mdns_service();
+        ensure_mdns_service();
+        ESP_LOGI(TAG, "AP discoverable at http://192.168.4.1 and http://%s", s_host_hint);
+    }
+
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         s_sta_ip[0] = '\0';
+        if (event_data) {
+            wifi_event_sta_disconnected_t *disc = (wifi_event_sta_disconnected_t *)event_data;
+            const char *reason_str;
+            switch (disc->reason) {
+                case WIFI_REASON_AUTH_FAIL:          reason_str = "wrong password";          break;
+                case WIFI_REASON_NO_AP_FOUND:        reason_str = "network not found";        break;
+                case WIFI_REASON_HANDSHAKE_TIMEOUT:  reason_str = "handshake timeout (wrong password?)"; break;
+                case WIFI_REASON_CONNECTION_FAIL:    reason_str = "connection failed";        break;
+                case WIFI_REASON_AUTH_EXPIRE:        reason_str = "auth expired";             break;
+                case WIFI_REASON_NOT_AUTHED:         reason_str = "not authenticated";        break;
+                case WIFI_REASON_ASSOC_FAIL:         reason_str = "association failed";       break;
+                case WIFI_REASON_BEACON_TIMEOUT:     reason_str = "AP out of range / lost";  break;
+                default:                             reason_str = "unknown";                  break;
+            }
+            ESP_LOGW(TAG, "WiFi disconnected from '%s': %s (reason=%d)",
+                     (char *)disc->ssid, reason_str, disc->reason);
+        }
         xEventGroupSetBits(s_wifi_events, WIFI_FAILED_BIT);
     }
 
@@ -209,6 +418,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         if (ev) {
             snprintf(s_sta_ip, sizeof(s_sta_ip), IPSTR, IP2STR(&ev->ip_info.ip));
         }
+        reset_mdns_service();
         ensure_mdns_service();
         ESP_LOGI(TAG, "STA connected: IP=%s, mDNS=http://%s", s_sta_ip[0] ? s_sta_ip : "(unknown)", s_host_hint);
         xEventGroupSetBits(s_wifi_events, WIFI_CONNECTED_BIT);
@@ -348,13 +558,13 @@ static esp_err_t root_get(httpd_req_t *req) {
         if (httpd_resp_send_chunk(req, buf, n) != ESP_OK) {
             fclose(f);
             // Browser may drop/reload while fetching index.html; treat as non-fatal.
-            ESP_LOGW(TAG, "Client disconnected while sending index.html");
+            ESP_LOGD(TAG, "Client disconnected while sending index.html");
             return ESP_OK;
         }
     }
     fclose(f);
     if (httpd_resp_send_chunk(req, NULL, 0) != ESP_OK) {
-        ESP_LOGW(TAG, "Client disconnected while finalizing index.html response");
+        ESP_LOGD(TAG, "Client disconnected while finalizing index.html response");
         return ESP_OK;
     }
     return ESP_OK;
@@ -385,12 +595,21 @@ static esp_err_t status_get(httpd_req_t *req) {
     );
 
     char json[1400];
+    char access_url[64];
     bool ota_running = ota_is_busy();
+
+    if (st.wifi_ap_running) {
+        snprintf(access_url, sizeof(access_url), "http://192.168.4.1");
+    } else if (s_sta_ip[0]) {
+        snprintf(access_url, sizeof(access_url), "http://%s", s_sta_ip);
+    } else {
+        snprintf(access_url, sizeof(access_url), "http://%s", s_host_hint);
+    }
 
     snprintf(
         json,
         sizeof(json),
-        "{\"battery_percent\":%d,\"active_preset\":%d,\"wifi_ap_running\":%s,\"firmware_version\":\"%s\",\"ota_url\":\"%s\",\"ap_ssid\":\"%s\",\"ap_runtime_ssid\":\"%s\",\"home_ssid\":\"%s\",\"backup_ssid\":\"%s\",\"prefer_backup_first\":%s,\"home_wifi_set\":%s,\"ota_running\":%s,\"sta_ip\":\"%s\",\"hostname_hint\":\"%s\",\"presets\":%s}",
+        "{\"battery_percent\":%d,\"active_preset\":%d,\"wifi_ap_running\":%s,\"firmware_version\":\"%s\",\"ota_url\":\"%s\",\"ap_ssid\":\"%s\",\"ap_runtime_ssid\":\"%s\",\"home_ssid\":\"%s\",\"backup_ssid\":\"%s\",\"prefer_backup_first\":%s,\"home_wifi_set\":%s,\"ota_running\":%s,\"sta_ip\":\"%s\",\"hostname_hint\":\"%s\",\"access_url\":\"%s\",\"presets\":%s}",
         st.battery_percent,
         st.active_preset,
         st.wifi_ap_running ? "true" : "false",
@@ -405,12 +624,13 @@ static esp_err_t status_get(httpd_req_t *req) {
         ota_running ? "true" : "false",
         s_sta_ip,
         s_host_hint,
+        access_url,
         presets
     );
     esp_err_t err = send_json(req, json);
     if (err != ESP_OK) {
         // Polling clients can disconnect between refresh intervals; non-fatal.
-        ESP_LOGW(TAG, "Client disconnected while sending /api/status response");
+        ESP_LOGD(TAG, "Client disconnected while sending /api/status response");
         return ESP_OK;
     }
     return ESP_OK;
@@ -576,7 +796,7 @@ static esp_err_t device_post(httpd_req_t *req) {
     if (err != ESP_OK) {
         // Settings are already persisted at this point. If the browser drops
         // connection (e.g. AP/client transition), treat it as non-fatal.
-        ESP_LOGW(TAG, "Client disconnected before save response was delivered");
+        ESP_LOGD(TAG, "Client disconnected before save response was delivered");
         return ESP_OK;
     }
     return ESP_OK;
@@ -604,7 +824,7 @@ static esp_err_t factory_reset_post(httpd_req_t *req) {
 
     esp_err_t err = send_json(req, "{\"ok\":true,\"message\":\"factory_reset\"}");
     if (err != ESP_OK) {
-        ESP_LOGW(TAG, "Client disconnected before factory reset response was delivered");
+        ESP_LOGD(TAG, "Client disconnected before factory reset response was delivered");
         return ESP_OK;
     }
     return ESP_OK;
@@ -675,6 +895,13 @@ static esp_err_t captive_redirect_get(httpd_req_t *req) {
     return httpd_resp_send(req, NULL, 0);
 }
 
+static esp_err_t captive_probe_ok(httpd_req_t *req) {
+    touch_activity();
+    httpd_resp_set_status(req, "204 No Content");
+    httpd_resp_set_type(req, "text/plain");
+    return httpd_resp_send(req, NULL, 0);
+}
+
 static void ap_toggle_task(void *arg) {
     ap_toggle_request_t *req = (ap_toggle_request_t *)arg;
     bool want_on = req && req->on;
@@ -722,6 +949,8 @@ void web_server_stop_ap(void) {
         s_server = NULL;
     }
 
+    captive_dns_stop();
+
     if (s_wifi_inited) {
         wifi_mode_t mode = WIFI_MODE_NULL;
         if (esp_wifi_get_mode(&mode) == ESP_OK && mode != WIFI_MODE_NULL) {
@@ -730,6 +959,8 @@ void web_server_stop_ap(void) {
             esp_wifi_set_mode(WIFI_MODE_NULL);
         }
     }
+
+    reset_mdns_service();
 
     s_ap_running = false;
     s_sta_ip[0] = '\0';
@@ -808,6 +1039,7 @@ void web_server_start_ap(void) {
     ESP_ERROR_CHECK(esp_wifi_start());
 
     ESP_ERROR_CHECK(ensure_http_server_started());
+    captive_dns_start();
 
     s_ap_running = true;
     app_state_set_wifi_ap_running(true);
@@ -817,6 +1049,8 @@ void web_server_start_ap(void) {
     vTaskDelay(pdMS_TO_TICKS(50));
     touch_activity();
     ESP_LOGI(TAG, "WiFi AP started: %s", s_ap_runtime_ssid);
+    ESP_LOGI(TAG, "  -> Connect to AP SSID: %s", s_ap_runtime_ssid);
+    ESP_LOGI(TAG, "  -> Open browser to: http://192.168.4.1");
 }
 
 static esp_err_t ensure_http_server_started(void) {
@@ -834,22 +1068,30 @@ static esp_err_t ensure_http_server_started(void) {
     }
 
     httpd_uri_t root = {.uri = "/", .method = HTTP_GET, .handler = root_get, .user_ctx = NULL};
+    httpd_uri_t root_head = {.uri = "/", .method = HTTP_HEAD, .handler = captive_probe_ok, .user_ctx = NULL};
     httpd_uri_t status = {.uri = "/api/status", .method = HTTP_GET, .handler = status_get, .user_ctx = NULL};
     httpd_uri_t preset = {.uri = "/api/preset", .method = HTTP_POST, .handler = preset_post, .user_ctx = NULL};
     httpd_uri_t device = {.uri = "/api/device", .method = HTTP_POST, .handler = device_post, .user_ctx = NULL};
     httpd_uri_t factory_reset = {.uri = "/api/factory_reset", .method = HTTP_POST, .handler = factory_reset_post, .user_ctx = NULL};
     httpd_uri_t ota = {.uri = "/api/ota", .method = HTTP_POST, .handler = ota_post, .user_ctx = NULL};
     httpd_uri_t wifi_ap = {.uri = "/api/wifi_ap", .method = HTTP_POST, .handler = wifi_ap_post, .user_ctx = NULL};
+    httpd_uri_t mtu_probe_head = {.uri = "/mtuprobe", .method = HTTP_HEAD, .handler = captive_probe_ok, .user_ctx = NULL};
+    httpd_uri_t mtu_probe_get = {.uri = "/mtuprobe", .method = HTTP_GET, .handler = captive_probe_ok, .user_ctx = NULL};
     httpd_uri_t captive = {.uri = "/*", .method = HTTP_GET, .handler = captive_redirect_get, .user_ctx = NULL};
+    httpd_uri_t captive_head = {.uri = "/*", .method = HTTP_HEAD, .handler = captive_probe_ok, .user_ctx = NULL};
 
     httpd_register_uri_handler(s_server, &root);
+    httpd_register_uri_handler(s_server, &root_head);
     httpd_register_uri_handler(s_server, &status);
     httpd_register_uri_handler(s_server, &preset);
     httpd_register_uri_handler(s_server, &device);
     httpd_register_uri_handler(s_server, &factory_reset);
     httpd_register_uri_handler(s_server, &ota);
     httpd_register_uri_handler(s_server, &wifi_ap);
+    httpd_register_uri_handler(s_server, &mtu_probe_head);
+    httpd_register_uri_handler(s_server, &mtu_probe_get);
     httpd_register_uri_handler(s_server, &captive);
+    httpd_register_uri_handler(s_server, &captive_head);
     return ESP_OK;
 }
 
@@ -901,6 +1143,10 @@ bool web_server_start_preferred_network(void) {
 
 void web_server_init(void) {
     if (!s_wifi_inited) {
+        // Browser probes and reconnects are expected in captive-portal flows.
+        esp_log_level_set("httpd_txrx", ESP_LOG_ERROR);
+        esp_log_level_set("httpd_uri", ESP_LOG_ERROR);
+
         ESP_ERROR_CHECK(esp_netif_init());
         ESP_ERROR_CHECK(esp_event_loop_create_default());
         s_ap_netif = esp_netif_create_default_wifi_ap();
