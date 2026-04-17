@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DoggoLights Config</title>
+  <style>
+    :root {
+      --bg: #0d1512;
+      --panel: rgba(19, 31, 25, 0.94);
+      --line: #2d4b39;
+      --text: #ebf5ee;
+      --muted: #adc6b4;
+      --accent: #73e2a7;
+      --accent-strong: #35b96f;
+      --danger: #ff8d7a;
+      --shadow: rgba(0, 0, 0, 0.28);
+    }
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(63, 105, 82, 0.9), transparent 38%),
+        linear-gradient(180deg, #102019, var(--bg));
+      color: var(--text);
+      min-height: 100vh;
+      padding: 14px 14px 28px;
+    }
+    .card {
+      max-width: 760px;
+      margin: 0 auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 18px 50px var(--shadow);
+      backdrop-filter: blur(4px);
+    }
+    h1, h2, h3, p {
+      margin-top: 0;
+    }
+    h2 {
+      margin-bottom: 6px;
+    }
+    .headerbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .headerbar h2 {
+      margin: 0;
+    }
+    .status-pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(115, 226, 167, 0.24);
+      background: rgba(11, 21, 16, 0.8);
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .topline {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .tabs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .tab {
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(13, 23, 18, 0.65);
+      color: var(--text);
+      font-weight: 700;
+      flex: 1;
+    }
+    .tab.active {
+      background: linear-gradient(135deg, rgba(115, 226, 167, 0.22), rgba(53, 185, 111, 0.14));
+      border-color: var(--accent);
+    }
+    .tab.icon-tab {
+      flex: 0 0 auto;
+      width: 44px;
+      height: 44px;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      background: rgba(13, 23, 18, 0.65);
+    }
+    .tab.icon-tab:hover {
+      background: rgba(115, 226, 167, 0.12);
+      border-color: var(--accent);
+    }
+    .tab.icon-tab.active {
+      background: rgba(115, 226, 167, 0.12);
+      border-color: var(--accent);
+    }
+    .view {
+      display: none;
+    }
+    .view.active {
+      display: block;
+    }
+    .section {
+      margin-bottom: 18px;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(45, 75, 57, 0.88);
+      background: rgba(13, 23, 18, 0.55);
+    }
+    .preview-wrap {
+      margin-bottom: 18px;
+    }
+    .row {
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #14231b;
+      color: var(--text);
+      box-sizing: border-box;
+      font: inherit;
+    }
+    button {
+      background: var(--accent);
+      color: #08301a;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: #203328;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+    button.danger {
+      background: var(--danger);
+      color: #2a0901;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .password-input-wrap {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .password-input-wrap input {
+      flex: 1;
+      min-width: 0;
+    }
+    .password-toggle {
+      width: auto;
+      min-width: 50px;
+      padding: 10px 12px;
+      background: #203328;
+      color: var(--text);
+      border: 1px solid var(--line);
+      line-height: 1;
+    }
+    .triple {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .control-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+      align-items: end;
+    }
+    .muted {
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .preview {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 0;
+    }
+    .preview-stage {
+      position: relative;
+      width: 100%;
+      height: 180px;
+      border-radius: 16px;
+      border: 1px solid rgba(115, 226, 167, 0.12);
+      background: linear-gradient(180deg, rgba(4, 8, 6, 0.92), rgba(12, 18, 15, 0.92));
+      overflow: hidden;
+    }
+    .led-orb {
+      position: absolute;
+      top: 62px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      filter: blur(0.2px);
+      box-shadow: 0 0 18px currentColor, 0 0 34px currentColor;
+      transition: transform 120ms linear, opacity 120ms linear, background-color 120ms linear, box-shadow 120ms linear;
+    }
+    .led-orb.left {
+      left: 25%;
+    }
+    .led-orb.right {
+      right: 25%;
+    }
+    .smallcaps {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .led-picks {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(173, 198, 180, 0.2);
+      border-radius: 12px;
+      padding: 6px;
+      background: rgba(14, 22, 17, 0.9);
+    }
+    .led-divider {
+      width: 1px;
+      align-self: stretch;
+      background: rgba(173, 198, 180, 0.2);
+    }
+    .led-pick {
+      flex: 1;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: transparent;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .led-pick.active {
+      border-color: var(--accent);
+      background: rgba(115, 226, 167, 0.08);
+    }
+    .led-swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      box-shadow: 0 0 14px currentColor;
+      flex: 0 0 auto;
+    }
+    .effect-note {
+      min-height: 44px;
+    }
+    .spectrum-slider {
+      border: 1px solid rgba(173, 198, 180, 0.16);
+      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(12, 20, 16, 0.96), rgba(9, 15, 12, 0.96));
+      padding: 10px 0 10px;
+      margin-bottom: 10px;
+    }
+    .spectrum-slider input[type="range"] {
+      margin: 0;
+      display: block;
+      width: 100%;
+    }
+    #hueSlider {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 18px;
+      border: 0;
+      border-radius: 10px;
+      background: #2a2a2a;
+    }
+    #hueSlider::-webkit-slider-runnable-track {
+      height: 18px;
+      border-radius: 10px;
+      border: 0;
+      background: transparent;
+    }
+    #hueSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #f8fff9;
+      border: 2px solid #15251b;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.18);
+      cursor: pointer;
+      margin-top: 0;
+    }
+    #hueSlider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #f8fff9;
+      border: 2px solid #15251b;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.18);
+      cursor: pointer;
+    }
+    #hueSlider::-moz-range-track {
+      height: 18px;
+      border-radius: 0 0 10px 10px;
+      border: 0;
+      background: transparent;
+    }
+    .slider-readout {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    details {
+      border: 1px dashed rgba(173, 198, 180, 0.28);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: rgba(9, 15, 12, 0.55);
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .message {
+      min-height: 20px;
+      font-size: 14px;
+    }
+    .message.ok {
+      color: var(--accent);
+    }
+    .message.error {
+      color: var(--danger);
+    }
+    .ota-btn.unavailable {
+      background: #2a2f2c;
+      color: #8ea095;
+      border: 1px solid #3a4a42;
+    }
+    .offline-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      border-radius: 12px;
+      background: rgba(255, 60, 40, 0.12);
+      border: 1px solid rgba(255, 141, 122, 0.5);
+      color: var(--danger);
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .offline-banner.visible {
+      display: flex;
+    }
+    .offline-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--danger);
+      flex-shrink: 0;
+      animation: pulse-red 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse-red {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    .card.offline {
+      box-shadow: 0 0 0 2px rgba(255, 100, 80, 0.6), 0 18px 50px var(--shadow);
+      border-color: rgba(255, 100, 80, 0.5);
+    }
+    @media (max-width: 640px) {
+      .grid, .triple, .tabs, .control-row {
+        grid-template-columns: 1fr;
+      }
+      .led-picks {
+        display: flex;
+      }
+      .preview-stage {
+        height: 170px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="headerbar">
+      <h2 id="deviceTitle">DoggoLights</h2>
+      <div class="status-pill" id="statusLine">--%</div>
+    </div>
+    <div class="offline-banner" id="offlineBanner">
+      <div class="offline-dot"></div>
+      <span>Device unreachable — the WiFi AP may have timed out. Changes won't reach the device.</span>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" id="lightsTabBtn" onclick="openTab('lights')">Lights</button>
+      <button class="tab icon-tab" id="deviceTabBtn" onclick="openTab('device')" title="Device Settings">⚙️</button>
+    </div>
+
+    <div id="lightsView" class="view active">
+      <div class="preview-wrap">
+        <div class="preview">
+          <div>
+            <div class="smallcaps">Preview</div>
+          </div>
+          <div class="preview-stage">
+            <div class="led-orb left" id="orb1" onclick="selectLed(1)"></div>
+            <div class="led-orb right" id="orb2" onclick="selectLed(2)"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="control-row row">
+          <div>
+            <label for="preset">Preset Slot</label>
+            <select id="preset" onchange="loadPresetIntoEditor()">
+              <option value="0">Preset 1</option>
+              <option value="1">Preset 2</option>
+              <option value="2">Preset 3</option>
+            </select>
+          </div>
+          <div>
+            <label for="effect">Effect</label>
+            <select id="effect" onchange="onEditorEffectChange()">
+              <option value="1">Static</option>
+              <option value="2">Breathing</option>
+              <option value="3">FlipFlop</option>
+              <option value="4">Rainbow</option>
+            </select>
+          </div>
+          <div>
+            <label>LEDs</label>
+            <div class="led-picks">
+              <button class="led-pick active" id="ledPick1" onclick="selectLed(1)">
+                <span>LED 1</span>
+                <span class="led-swatch" id="ledSwatch1"></span>
+              </button>
+              <div class="led-divider" aria-hidden="true"></div>
+              <button class="led-pick" id="ledPick2" onclick="selectLed(2)">
+                <span>LED 2</span>
+                <span class="led-swatch" id="ledSwatch2"></span>
+              </button>
+            </div>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="secondary" onclick="cycleNextPresetPreview()">Preview Next Slot</button>
+          </div>
+        </div>
+
+        <input id="h1" type="hidden" value="0" />
+        <input id="h2" type="hidden" value="120" />
+
+        <div class="row">
+          <label for="hueSlider">Selected LED Color</label>
+          <div class="spectrum-slider">
+            <input id="hueSlider" type="range" min="0" max="360" step="15" value="0" oninput="updateSelectedHue()" />
+          </div>
+          <div class="slider-readout">
+            <span>Editing <strong id="selectedLedLabel">LED 1</strong></span>
+            <span>Hue <strong id="selectedHueValue">0</strong></span>
+          </div>
+        </div>
+
+        <div class="row">
+          <button onclick="savePreset()">Save To Selected Preset</button>
+        </div>
+        <div id="lightMessage" class="message"></div>
+      </div>
+    </div>
+
+    <div id="deviceView" class="view">
+      <div class="section">
+        <h3>Device Settings</h3>
+        <div class="row">
+          <div>Firmware: <strong id="fwVersionText">-</strong></div>
+        </div>
+        <div class="row">
+          <div>Network: <strong id="networkAddressText">AP mode (192.168.4.1)</strong></div>
+        </div>
+
+        <div class="grid row">
+          <div>
+            <label for="apSsid">WiFi AP Name</label>
+            <input id="apSsid" type="text" maxlength="32" placeholder="DoggoLights" oninput="markDeviceSettingsDirty()" />
+          </div>
+          <div>
+            <label for="apPass">WiFi AP Password</label>
+            <div class="password-input-wrap">
+              <input id="apPass" type="password" maxlength="64" placeholder="Leave blank for open AP" oninput="markDeviceSettingsDirty()" />
+              <button type="button" class="password-toggle" id="apPassToggle" onclick="togglePasswordVisibility('apPass', 'apPassToggle')" title="Show password">👁</button>
+            </div>
+          </div>
+        </div>
+
+        <details class="row">
+          <summary>Wi-Fi Networks</summary>
+          <div class="row" style="margin-top:10px;">
+            <div>
+              <label for="networkPriority">Preferred Network</label>
+              <select id="networkPriority" onchange="markDeviceSettingsDirty()">
+                <option value="0">Primary first, then Backup</option>
+                <option value="1">Backup first, then Primary</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid row" style="margin-top:10px;">
+            <div>
+              <label for="homeSsid">Primary SSID (Home / Hotspot)</label>
+              <input id="homeSsid" type="text" maxlength="32" placeholder="Phone hotspot or home Wi-Fi" oninput="markDeviceSettingsDirty()" />
+            </div>
+            <div>
+              <label for="homePass">Primary Password</label>
+              <div class="password-input-wrap">
+                <input id="homePass" type="password" maxlength="64" placeholder="Password" oninput="markDeviceSettingsDirty()" />
+                <button type="button" class="password-toggle" id="homePassToggle" onclick="togglePasswordVisibility('homePass', 'homePassToggle')" title="Show password">👁</button>
+              </div>
+            </div>
+          </div>
+
+          <details class="row" style="margin-top:8px;">
+            <summary>Backup Network (Optional)</summary>
+            <div class="grid row" style="margin-top:10px;">
+              <div>
+                <label for="backupSsid">Backup SSID</label>
+                <input id="backupSsid" type="text" maxlength="32" placeholder="Optional fallback network" oninput="markDeviceSettingsDirty()" />
+              </div>
+              <div>
+                <label for="backupPass">Backup Password</label>
+                <div class="password-input-wrap">
+                  <input id="backupPass" type="password" maxlength="64" placeholder="Password" oninput="markDeviceSettingsDirty()" />
+                  <button type="button" class="password-toggle" id="backupPassToggle" onclick="togglePasswordVisibility('backupPass', 'backupPassToggle')" title="Show password">👁</button>
+                </div>
+              </div>
+            </div>
+          </details>
+        </details>
+
+        <div class="row" style="margin-top:14px;">
+          <button onclick="saveDeviceSettings()">Save Device Settings</button>
+        </div>
+        <div class="row" style="margin-top:16px; padding-top:12px; border-top:1px solid #2a3140;">
+          <button class="secondary" onclick="turnOffAp()">Turn Off WiFi</button>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="danger" onclick="factoryResetDevice()">Factory Reset Device</button>
+        </div>
+        <div id="deviceMessage" class="message"></div>
+      </div>
+
+      <div class="section" id="otaSection">
+        <details>
+          <summary>Firmware Update</summary>
+          <div class="row" style="margin-top:10px;">
+            <button id="otaStartBtn" class="danger ota-btn" onclick="startOta()">Start OTA Update</button>
+          </div>
+          <div id="otaMessage" class="message"></div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      status: null,
+      previewTimer: null,
+      selectedLed: 1,
+      rainbowHue: 0,
+      breathingStep: 0,
+      flipState: 0,
+      lastFlipMs: 0,
+      editorDirty: false,
+      deviceSettingsDirty: false,
+    };
+
+    const PREVIEW_BREATHING_MS = 1000;
+    const PREVIEW_FLIPFLOP_MS = 300;
+
+    function setOffline(offline) {
+      document.getElementById('offlineBanner').classList.toggle('visible', offline);
+      document.querySelector('.card').classList.toggle('offline', offline);
+    }
+
+    async function api(path, opts) {
+      try {
+        const res = await fetch(path, opts || {});
+        if (!res.ok) {
+          throw new Error(await res.text());
+        }
+        return res.json();
+      } catch (err) {
+        setOffline(true);
+        throw err;
+      }
+    }
+
+    function openTab(name) {
+      document.getElementById('lightsView').classList.toggle('active', name === 'lights');
+      document.getElementById('deviceView').classList.toggle('active', name === 'device');
+      document.getElementById('lightsTabBtn').classList.toggle('active', name === 'lights');
+      document.getElementById('deviceTabBtn').classList.toggle('active', name === 'device');
+    }
+
+    function markDeviceSettingsDirty() {
+      state.deviceSettingsDirty = true;
+    }
+
+    function togglePasswordVisibility(inputId, buttonId) {
+      const input = document.getElementById(inputId);
+      const btn = document.getElementById(buttonId);
+      const showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      btn.title = showing ? 'Show password' : 'Hide password';
+    }
+
+    function setMessage(id, text, isError) {
+      const el = document.getElementById(id);
+      el.textContent = text || '';
+      el.className = `message ${text ? (isError ? 'error' : 'ok') : ''}`;
+    }
+
+    function hsl(h, s, l) {
+      return `hsl(${h}, ${s}%, ${l}%)`;
+    }
+
+    function currentEffect() {
+      return Number(document.getElementById('effect').value);
+    }
+
+    function currentHue1() {
+      return Number(document.getElementById('h1').value);
+    }
+
+    function currentHue2() {
+      return Number(document.getElementById('h2').value);
+    }
+
+    function snapHue(value) {
+      const numeric = Number(value) || 0;
+      const stepped = Math.round(numeric / 15) * 15;
+      return Math.max(0, Math.min(360, stepped));
+    }
+
+    function selectedHue() {
+      return state.selectedLed === 1 ? currentHue1() : currentHue2();
+    }
+
+    function selectLed(which) {
+      state.selectedLed = which === 2 ? 2 : 1;
+      document.getElementById('ledPick1').classList.toggle('active', state.selectedLed === 1);
+      document.getElementById('ledPick2').classList.toggle('active', state.selectedLed === 2);
+      document.getElementById('selectedLedLabel').textContent = `LED ${state.selectedLed}`;
+      updatePreviewForm();
+    }
+
+    function setSelectedHue(value) {
+      const hue = snapHue(value);
+      if (state.selectedLed === 1) {
+        document.getElementById('h1').value = String(hue);
+      } else {
+        document.getElementById('h2').value = String(hue);
+      }
+    }
+
+    function updateSelectedHue() {
+      setSelectedHue(document.getElementById('hueSlider').value);
+      state.editorDirty = true;
+      updatePreviewForm();
+    }
+
+    function onEditorEffectChange() {
+      state.editorDirty = true;
+      updatePreviewForm();
+    }
+
+    function applyOrb(orb, hue, lightness, visible, strength = 1) {
+      orb.style.backgroundColor = hsl(hue, 100, lightness);
+      orb.style.color = hsl(hue, 100, Math.max(lightness, 45));
+      orb.style.opacity = visible ? String(Math.max(0.05, Math.min(1, strength))) : '0.12';
+      orb.style.transform = visible ? 'scale(1)' : 'scale(0.82)';
+    }
+
+    function updatePreviewForm() {
+      const h1 = snapHue(currentHue1());
+      const h2 = snapHue(currentHue2());
+      document.getElementById('h1').value = String(h1);
+      document.getElementById('h2').value = String(h2);
+      document.getElementById('hueSlider').value = String(selectedHue());
+      document.getElementById('selectedHueValue').textContent = String(selectedHue());
+      document.getElementById('ledSwatch1').style.backgroundColor = hsl(h1, 100, 50);
+      document.getElementById('ledSwatch1').style.color = hsl(h1, 100, 50);
+      document.getElementById('ledSwatch2').style.backgroundColor = hsl(h2, 100, 50);
+      document.getElementById('ledSwatch2').style.color = hsl(h2, 100, 50);
+    }
+
+    function loadPresetIntoEditor() {
+      if (!state.status || !state.status.presets) {
+        return;
+      }
+      const idx = Number(document.getElementById('preset').value);
+      const preset = state.status.presets[idx];
+      if (!preset) {
+        return;
+      }
+      document.getElementById('effect').value = preset.effect;
+      document.getElementById('h1').value = String(snapHue(preset.hue1));
+      document.getElementById('h2').value = String(snapHue(preset.hue2));
+      state.editorDirty = false;
+      updatePreviewForm();
+    }
+
+    function buildSegmentedSliderGradient() {
+      const stops = [];
+      // Black padding at start
+      stops.push(`#000 0%`);
+      stops.push(`#000 4%`);
+      
+      // Spectrum colors
+      for (let i = 0; i <= 24; i += 1) {
+        const hue = i * 15;
+        const start = 4 + (i / 24) * 92;
+        const next = 4 + ((i + 1) / 24) * 92;
+        stops.push(`hsl(${hue},100%,50%) ${start}%`);
+        if (i < 24) {
+          stops.push(`hsl(${hue},100%,50%) ${next}%`);
+        }
+      }
+      
+      // Black padding at end
+      stops.push(`#000 96%`);
+      stops.push(`#000 100%`);
+      
+      return `linear-gradient(90deg, ${stops.join(', ')})`;
+    }
+
+    async function cycleNextPresetPreview() {
+      const preset = document.getElementById('preset');
+      const idx = (Number(preset.value) + 1) % 3;
+      preset.value = String(idx);
+      loadPresetIntoEditor();
+
+      if (state.status && state.status.presets && state.status.presets[idx]) {
+        const p = state.status.presets[idx];
+        await api(`/api/preset?idx=${idx}&effect=${p.effect}&h1=${p.hue1}&h2=${p.hue2}`, { method: 'POST' });
+        state.editorDirty = false;
+        await refresh();
+      }
+    }
+
+    function animatePreview() {
+      const orb1 = document.getElementById('orb1');
+      const orb2 = document.getElementById('orb2');
+      const effect = currentEffect();
+      const hue1 = currentHue1();
+      const hue2 = currentHue2();
+      const now = performance.now();
+
+      if (effect === 1) {
+        applyOrb(orb1, hue1, 56, true);
+        applyOrb(orb2, hue2, 56, true);
+      } else if (effect === 2) {
+        const phase = (now % PREVIEW_BREATHING_MS) / PREVIEW_BREATHING_MS;
+        const pct = 5 + ((Math.sin(phase * Math.PI * 2) + 1) * 0.5 * 95);
+        const lightness = Math.max(3, Math.round((pct / 100) * 56));
+        const strength = pct / 100;
+        applyOrb(orb1, hue1, lightness, true, strength);
+        applyOrb(orb2, hue2, lightness, true, strength);
+      } else if (effect === 3) {
+        if ((now - state.lastFlipMs) >= PREVIEW_FLIPFLOP_MS) {
+          state.flipState = (state.flipState + 1) % 2;
+          state.lastFlipMs = now;
+        }
+        const leftOn = state.flipState === 0;
+        applyOrb(orb1, hue1, 56, leftOn);
+        applyOrb(orb2, hue2, 56, !leftOn);
+      } else {
+        state.rainbowHue = (state.rainbowHue + 3) % 360;
+        applyOrb(orb1, state.rainbowHue, 56, true);
+        applyOrb(orb2, state.rainbowHue, 56, true);
+      }
+    }
+
+    function ensurePreviewRunning() {
+      if (!state.previewTimer) {
+        state.previewTimer = setInterval(animatePreview, 50);
+      }
+    }
+
+    async function refresh() {
+      const s = await api('/api/status');
+      setOffline(false);
+      state.status = s;
+      const deviceName = (s.ap_runtime_ssid && s.ap_runtime_ssid.length)
+        ? s.ap_runtime_ssid
+        : ((s.ap_ssid && s.ap_ssid.length) ? s.ap_ssid : 'DoggoLights');
+      document.getElementById('deviceTitle').textContent = deviceName;
+      document.getElementById('statusLine').textContent = `🔋 ${s.battery_percent}%`;
+      document.getElementById('fwVersionText').textContent = s.firmware_version || '-';
+      const hostHint = s.hostname_hint || 'doggolights.local';
+      const staIp = s.sta_ip || '';
+      document.getElementById('networkAddressText').textContent = staIp
+        ? `${staIp} (${hostHint})`
+        : `AP mode (192.168.4.1) / ${hostHint}`;
+      document.getElementById('otaStartBtn').classList.toggle('unavailable', !s.home_wifi_set);
+      if (!state.deviceSettingsDirty) {
+        document.getElementById('apSsid').value = s.ap_ssid || '';
+        document.getElementById('homeSsid').value = s.home_ssid || '';
+        document.getElementById('backupSsid').value = s.backup_ssid || '';
+        document.getElementById('networkPriority').value = s.prefer_backup_first ? '1' : '0';
+        document.getElementById('apPass').value = '';
+        document.getElementById('homePass').value = '';
+        document.getElementById('backupPass').value = '';
+      }
+      if (!state.editorDirty) {
+        document.getElementById('preset').value = String(s.active_preset || 0);
+        loadPresetIntoEditor();
+      }
+    }
+
+    async function savePreset() {
+      const idx = document.getElementById('preset').value;
+      const effect = document.getElementById('effect').value;
+      const h1 = document.getElementById('h1').value;
+      const h2 = document.getElementById('h2').value;
+      await api(`/api/preset?idx=${idx}&effect=${effect}&h1=${h1}&h2=${h2}`, { method: 'POST' });
+      state.editorDirty = false;
+      setMessage('lightMessage', `Preset ${Number(idx) + 1} saved.`, false);
+      await refresh();
+    }
+
+    async function saveDeviceSettings() {
+      const apPass = document.getElementById('apPass').value;
+      if (apPass.length > 0 && apPass.length < 8) {
+        setMessage('deviceMessage', 'AP password must be empty (open AP) or at least 8 characters.', true);
+        return;
+      }
+
+      const apSsid = document.getElementById('apSsid').value.trim();
+      const homeSsid = document.getElementById('homeSsid').value.trim();
+      const backupSsid = document.getElementById('backupSsid').value.trim();
+      const homePass = document.getElementById('homePass').value;
+      const backupPass = document.getElementById('backupPass').value;
+      const preferBackupFirst = document.getElementById('networkPriority').value === '1';
+
+      const currentApSsid = (state.status && state.status.ap_ssid) ? state.status.ap_ssid : '';
+      const currentHomeSsid = (state.status && state.status.home_ssid) ? state.status.home_ssid : '';
+      const currentBackupSsid = (state.status && state.status.backup_ssid) ? state.status.backup_ssid : '';
+      const currentPreferBackupFirst = !!(state.status && state.status.prefer_backup_first);
+
+      const apSettingsChanged = (apSsid !== currentApSsid) || apPass.length > 0;
+      if (apSettingsChanged) {
+        const proceed = confirm('Changing AP name/password will restart the WiFi AP and disconnect your current connection. Continue?');
+        if (!proceed) {
+          return;
+        }
+      }
+
+      const params = new URLSearchParams();
+
+      if (apSsid !== currentApSsid) {
+        params.set('ap_ssid', apSsid);
+      }
+      if (homeSsid !== currentHomeSsid) {
+        params.set('home_ssid', homeSsid);
+      }
+      if (backupSsid !== currentBackupSsid) {
+        params.set('backup_ssid', backupSsid);
+      }
+      if (preferBackupFirst !== currentPreferBackupFirst) {
+        params.set('prefer_backup_first', preferBackupFirst ? '1' : '0');
+      }
+
+      // Password fields are intentionally blank on refresh; only send when user typed a new value.
+      if (apPass.length > 0) {
+        params.set('ap_pass', apPass);
+      }
+      if (homePass.length > 0) {
+        params.set('home_pass', homePass);
+      }
+      if (backupPass.length > 0) {
+        params.set('backup_pass', backupPass);
+      }
+
+      if (!params.toString()) {
+        setMessage('deviceMessage', 'No settings changed.', false);
+        state.deviceSettingsDirty = false;
+        return;
+      }
+
+      try {
+        await api(`/api/device?${params.toString()}`, { method: 'POST' });
+        state.deviceSettingsDirty = false;
+        if (apSettingsChanged) {
+          setMessage('deviceMessage', 'Device settings saved. AP is restarting; reconnect to continue.', false);
+        } else {
+          setMessage('deviceMessage', 'Device settings saved.', false);
+          await refresh();
+        }
+      } catch (err) {
+        if (apSettingsChanged) {
+          setMessage('deviceMessage', 'Settings likely saved. AP restart interrupted the connection; reconnect to the updated AP.', false);
+          return;
+        }
+        setMessage('deviceMessage', 'Could not save device settings.', true);
+      }
+    }
+
+    async function startOta() {
+      if (!state.status || !state.status.home_wifi_set) {
+        setMessage('otaMessage', 'OTA unavailable: set and save at least one Wi-Fi network first.', true);
+        return;
+      }
+      if (!confirm('Start OTA update now? The device will leave AP mode, connect to the saved home Wi-Fi or hotspot, and reboot if the update succeeds.')) {
+        return;
+      }
+      try {
+        await api('/api/ota', { method: 'POST' });
+        setMessage('otaMessage', 'OTA sequence started.', false);
+      } catch (err) {
+        setMessage('otaMessage', `OTA failed: ${err.message || 'request failed'}`, true);
+      }
+    }
+
+    async function turnOffAp() {
+      await api('/api/wifi_ap?on=0', { method: 'POST' });
+      setMessage('deviceMessage', 'WiFi AP shutdown requested.', false);
+    }
+
+    async function factoryResetDevice() {
+      if (!confirm('Factory reset will clear AP/home Wi-Fi settings, passwords, and presets. Continue?')) {
+        return;
+      }
+      await api('/api/factory_reset', { method: 'POST' });
+      state.editorDirty = false;
+      state.deviceSettingsDirty = false;
+      setMessage('deviceMessage', 'Factory defaults restored.', false);
+      await refresh();
+    }
+
+    async function boot() {
+      document.getElementById('hueSlider').style.background = buildSegmentedSliderGradient();
+      ensurePreviewRunning();
+      selectLed(1);
+      updatePreviewForm();
+      await refresh();
+      setInterval(async () => {
+        try {
+          await refresh();
+        } catch (err) {
+          setMessage('deviceMessage', 'Could not refresh device status.', true);
+        }
+      }, 4000);
+    }
+
+    boot();
+  </script>
+</body>
+</html>
