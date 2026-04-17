@@ -39,6 +39,7 @@ typedef struct {
     char ssid[33];
     char password[65];
     char url[256];
+    char current_version[32];
 } ota_sequence_request_t;
 
 typedef struct {
@@ -216,6 +217,9 @@ static bool connect_to_home_wifi(const char *ssid, const char *password, TickTyp
 
 static void ota_sequence_task(void *arg) {
     ota_sequence_request_t *request = (ota_sequence_request_t *)arg;
+    char resolved_url[256] = {0};
+    char latest_version[32] = {0};
+    bool has_update = true;
 
     web_server_stop_ap();
 
@@ -227,7 +231,32 @@ static void ota_sequence_task(void *arg) {
         return;
     }
 
-    if (ota_pull_start(request->url) != ESP_OK) {
+    if (ota_pull_resolve_target(
+            request->url,
+            request->current_version,
+            resolved_url,
+            sizeof(resolved_url),
+            latest_version,
+            sizeof(latest_version),
+            &has_update) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to resolve OTA target from %s", request->url);
+        s_ota_sequence_running = false;
+        web_server_start_ap();
+        free(request);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    if (!has_update) {
+        ESP_LOGI(TAG, "OTA skipped: device already up to date (current=%s latest=%s)", request->current_version, latest_version);
+        s_ota_sequence_running = false;
+        web_server_start_ap();
+        free(request);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    if (ota_pull_start(resolved_url) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start OTA task");
         s_ota_sequence_running = false;
         web_server_start_ap();
@@ -516,6 +545,7 @@ static esp_err_t ota_post(httpd_req_t *req) {
     copy_bounded(request->ssid, sizeof(request->ssid), cfg.home_ssid);
     copy_bounded(request->password, sizeof(request->password), cfg.home_pass);
     copy_bounded(request->url, sizeof(request->url), cfg.ota_url);
+    copy_bounded(request->current_version, sizeof(request->current_version), cfg.firmware_version);
 
     s_ota_sequence_running = true;
     if (xTaskCreate(ota_sequence_task, "ota_sequence", 6144, request, 4, NULL) != pdPASS) {

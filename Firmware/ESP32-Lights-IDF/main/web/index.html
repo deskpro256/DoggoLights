@@ -538,6 +538,9 @@
         <details>
           <summary>Firmware Update</summary>
           <div class="row" style="margin-top:10px;">
+            <div>Current firmware: <strong id="fwVersionText">-</strong></div>
+          </div>
+          <div class="row" style="margin-top:10px;">
             <button id="otaStartBtn" class="danger ota-btn" onclick="startOta()">Start OTA Update</button>
           </div>
           <div id="otaMessage" class="message"></div>
@@ -781,6 +784,7 @@
         : ((s.ap_ssid && s.ap_ssid.length) ? s.ap_ssid : 'DoggoLights');
       document.getElementById('deviceTitle').textContent = deviceName;
       document.getElementById('statusLine').textContent = `🔋 ${s.battery_percent}%`;
+      document.getElementById('fwVersionText').textContent = s.firmware_version || '-';
       document.getElementById('otaStartBtn').classList.toggle('unavailable', !s.home_wifi_set);
       if (!state.deviceSettingsDirty) {
         document.getElementById('apSsid').value = s.ap_ssid || '';

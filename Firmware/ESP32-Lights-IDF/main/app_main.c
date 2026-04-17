@@ -1,9 +1,11 @@
 #include <stdbool.h>
+#include <string.h>
 
 #include "app_config.h"
 #include "app_state.h"
 #include "battery.h"
 #include "button.h"
+#include "esp_app_desc.h"
 #include "esp_log.h"
 #include "esp_mac.h"
 #include "esp_ota_ops.h"
@@ -17,6 +19,22 @@
 #include "web_server.h"
 
 static const char *TAG = "app";
+
+static void sync_firmware_version(device_config_t *cfg) {
+    const esp_app_desc_t *desc = esp_app_get_description();
+
+    if (!cfg || !desc || !desc->version[0]) {
+        return;
+    }
+
+    if (strcmp(cfg->firmware_version, desc->version) != 0) {
+        size_t n = strnlen(desc->version, sizeof(cfg->firmware_version) - 1);
+        ESP_LOGI(TAG, "Updating stored firmware version: %s -> %s", cfg->firmware_version, desc->version);
+        memcpy(cfg->firmware_version, desc->version, n);
+        cfg->firmware_version[n] = '\0';
+        storage_save_config(cfg);
+    }
+}
 
 static const char *effect_name(int e) {
     switch (e) {
@@ -154,6 +172,7 @@ void app_main(void) {
 
     device_config_t cfg;
     storage_load_or_default(&cfg);
+    sync_firmware_version(&cfg);
     app_state_set_config(&cfg);
 
     runtime_state_t st = {
