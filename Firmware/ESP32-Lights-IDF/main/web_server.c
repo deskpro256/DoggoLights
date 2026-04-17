@@ -15,12 +15,12 @@
 #include "esp_wifi.h"
 #include "esp_mac.h"
 #include "freertos/event_groups.h"
+#include "mdns.h"
 #include "leds.h"
 #include "ota_pull.h"
 #include "storage.h"
 
 static const char *TAG = "web";
-static const char *HOST_HINT = "doggylights.local";
 static const int AP_RESTART_GRACE_MS = 1000;
 
 #define WIFI_CONNECTED_BIT BIT0
@@ -34,10 +34,12 @@ static esp_netif_t *s_ap_netif;
 static esp_netif_t *s_sta_netif;
 static EventGroupHandle_t s_wifi_events;
 static char s_ap_runtime_ssid[33];
+static char s_sta_ip[16];
+static char s_mdns_hostname[32] = "doggolights";
+static char s_host_hint[40] = "doggolights.local";
+static bool s_mdns_ready;
 
 typedef struct {
-    char ssid[33];
-    char password[65];
     char url[256];
     char current_version[32];
 } ota_sequence_request_t;
@@ -47,6 +49,33 @@ typedef struct {
 } ap_toggle_request_t;
 
 static void ap_restart_task(void *arg);
+static esp_err_t ensure_http_server_started(void);
+
+static void build_mdns_hostname(void) {
+    snprintf(s_mdns_hostname, sizeof(s_mdns_hostname), "doggolights");
+    snprintf(s_host_hint, sizeof(s_host_hint), "doggolights.local");
+}
+
+static void ensure_mdns_service(void) {
+    if (s_mdns_ready) {
+        return;
+    }
+
+    if (mdns_init() != ESP_OK) {
+        ESP_LOGW(TAG, "mDNS init failed");
+        return;
+    }
+
+    if (mdns_hostname_set(s_mdns_hostname) != ESP_OK ||
+        mdns_instance_name_set("DoggoLights") != ESP_OK ||
+        mdns_service_add(NULL, "_http", "_tcp", 80, NULL, 0) != ESP_OK) {
+        ESP_LOGW(TAG, "mDNS setup failed");
+        return;
+    }
+
+    s_mdns_ready = true;
+    ESP_LOGI(TAG, "mDNS ready at http://%s", s_host_hint);
+}
 
 static size_t copy_bounded(char *dst, size_t dst_size, const char *src) {
     size_t n;
@@ -161,17 +190,23 @@ static void build_runtime_ap_ssid(const char *base_ssid, char *out, size_t out_s
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
     (void)arg;
-    (void)event_data;
 
     if (!s_wifi_events) {
         return;
     }
 
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        s_sta_ip[0] = '\0';
         xEventGroupSetBits(s_wifi_events, WIFI_FAILED_BIT);
     }
 
     if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        ip_event_got_ip_t *ev = (ip_event_got_ip_t *)event_data;
+        if (ev) {
+            snprintf(s_sta_ip, sizeof(s_sta_ip), IPSTR, IP2STR(&ev->ip_info.ip));
+        }
+        ensure_mdns_service();
+        ESP_LOGI(TAG, "STA connected: IP=%s, mDNS=http://%s", s_sta_ip[0] ? s_sta_ip : "(unknown)", s_host_hint);
         xEventGroupSetBits(s_wifi_events, WIFI_CONNECTED_BIT);
     }
 }
@@ -206,13 +241,28 @@ static bool connect_to_home_wifi(const char *ssid, const char *password, TickTyp
     );
 
     if (bits & WIFI_CONNECTED_BIT) {
-        ESP_LOGI(TAG, "Connected to home Wi-Fi for OTA");
+        ESP_LOGI(TAG, "Connected to Wi-Fi: %s", ssid);
         return true;
     }
 
-    ESP_LOGW(TAG, "Failed to connect to home Wi-Fi for OTA");
+    ESP_LOGW(TAG, "Failed to connect to Wi-Fi: %s", ssid);
     esp_wifi_disconnect();
     return false;
+}
+
+static bool connect_saved_wifi_ordered(const device_config_t *cfg, TickType_t timeout_ticks) {
+    if (!cfg) {
+        return false;
+    }
+
+    // OTA and preferred-network start use STA only; AP is a fallback outside this helper.
+    if (cfg->prefer_backup_first) {
+        return connect_to_home_wifi(cfg->backup_ssid, cfg->backup_pass, timeout_ticks) ||
+               connect_to_home_wifi(cfg->home_ssid, cfg->home_pass, timeout_ticks);
+    }
+
+    return connect_to_home_wifi(cfg->home_ssid, cfg->home_pass, timeout_ticks) ||
+           connect_to_home_wifi(cfg->backup_ssid, cfg->backup_pass, timeout_ticks);
 }
 
 static void ota_sequence_task(void *arg) {
@@ -223,7 +273,11 @@ static void ota_sequence_task(void *arg) {
 
     web_server_stop_ap();
 
-    if (!connect_to_home_wifi(request->ssid, request->password, pdMS_TO_TICKS(15000))) {
+    device_config_t cfg;
+    app_state_get_config(&cfg);
+
+    if (!connect_saved_wifi_ordered(&cfg, pdMS_TO_TICKS(10000))) {
+        ESP_LOGW(TAG, "OTA network connect failed: both primary and backup SSID attempts failed");
         s_ota_sequence_running = false;
         web_server_start_ap();
         free(request);
@@ -284,12 +338,17 @@ static esp_err_t root_get(httpd_req_t *req) {
     while ((n = fread(buf, 1, sizeof(buf), f)) > 0) {
         if (httpd_resp_send_chunk(req, buf, n) != ESP_OK) {
             fclose(f);
-            httpd_resp_sendstr_chunk(req, NULL);
-            return ESP_FAIL;
+            // Browser may drop/reload while fetching index.html; treat as non-fatal.
+            ESP_LOGW(TAG, "Client disconnected while sending index.html");
+            return ESP_OK;
         }
     }
     fclose(f);
-    return httpd_resp_send_chunk(req, NULL, 0);
+    if (httpd_resp_send_chunk(req, NULL, 0) != ESP_OK) {
+        ESP_LOGW(TAG, "Client disconnected while finalizing index.html response");
+        return ESP_OK;
+    }
+    return ESP_OK;
 }
 
 static esp_err_t status_get(httpd_req_t *req) {
@@ -316,11 +375,11 @@ static esp_err_t status_get(httpd_req_t *req) {
         cfg.presets[2].hue2
     );
 
-    char json[960];
+    char json[1400];
     snprintf(
         json,
         sizeof(json),
-        "{\"battery_percent\":%d,\"active_preset\":%d,\"wifi_ap_running\":%s,\"firmware_version\":\"%s\",\"ota_url\":\"%s\",\"ap_ssid\":\"%s\",\"ap_runtime_ssid\":\"%s\",\"home_ssid\":\"%s\",\"home_wifi_set\":%s,\"hostname_hint\":\"%s\",\"presets\":%s}",
+        "{\"battery_percent\":%d,\"active_preset\":%d,\"wifi_ap_running\":%s,\"firmware_version\":\"%s\",\"ota_url\":\"%s\",\"ap_ssid\":\"%s\",\"ap_runtime_ssid\":\"%s\",\"home_ssid\":\"%s\",\"backup_ssid\":\"%s\",\"prefer_backup_first\":%s,\"home_wifi_set\":%s,\"sta_ip\":\"%s\",\"hostname_hint\":\"%s\",\"presets\":%s}",
         st.battery_percent,
         st.active_preset,
         st.wifi_ap_running ? "true" : "false",
@@ -329,11 +388,20 @@ static esp_err_t status_get(httpd_req_t *req) {
         cfg.ap_ssid,
         s_ap_runtime_ssid,
         cfg.home_ssid,
+        cfg.backup_ssid,
+        cfg.prefer_backup_first ? "true" : "false",
         cfg.home_wifi_set ? "true" : "false",
-        HOST_HINT,
+        s_sta_ip,
+        s_host_hint,
         presets
     );
-    return send_json(req, json);
+    esp_err_t err = send_json(req, json);
+    if (err != ESP_OK) {
+        // Polling clients can disconnect between refresh intervals; non-fatal.
+        ESP_LOGW(TAG, "Client disconnected while sending /api/status response");
+        return ESP_OK;
+    }
+    return ESP_OK;
 }
 
 static esp_err_t preset_post(httpd_req_t *req) {
@@ -375,7 +443,7 @@ static esp_err_t preset_post(httpd_req_t *req) {
 }
 
 static esp_err_t device_post(httpd_req_t *req) {
-    char q[768] = {0};
+    char q[1024] = {0};
     char value[256];
     bool changed = false;
     bool ap_settings_changed = false;
@@ -383,6 +451,9 @@ static esp_err_t device_post(httpd_req_t *req) {
     bool ap_pass_changed = false;
     bool home_ssid_changed = false;
     bool home_pass_changed = false;
+    bool backup_ssid_changed = false;
+    bool backup_pass_changed = false;
+    bool prefer_network_changed = false;
     bool ota_url_changed = false;
     device_config_t cfg;
 
@@ -421,7 +492,7 @@ static esp_err_t device_post(httpd_req_t *req) {
             home_ssid_changed = true;
         }
         copy_bounded(cfg.home_ssid, sizeof(cfg.home_ssid), value);
-        cfg.home_wifi_set = cfg.home_ssid[0] != '\0';
+        cfg.home_wifi_set = (cfg.home_ssid[0] != '\0') || (cfg.backup_ssid[0] != '\0');
         changed = true;
     }
     if (query_value_decoded(q, "home_pass", value, sizeof(value))) {
@@ -429,6 +500,29 @@ static esp_err_t device_post(httpd_req_t *req) {
             home_pass_changed = true;
         }
         copy_bounded(cfg.home_pass, sizeof(cfg.home_pass), value);
+        changed = true;
+    }
+    if (query_value_decoded(q, "backup_ssid", value, sizeof(value))) {
+        if (strcmp(cfg.backup_ssid, value) != 0) {
+            backup_ssid_changed = true;
+        }
+        copy_bounded(cfg.backup_ssid, sizeof(cfg.backup_ssid), value);
+        cfg.home_wifi_set = (cfg.home_ssid[0] != '\0') || (cfg.backup_ssid[0] != '\0');
+        changed = true;
+    }
+    if (query_value_decoded(q, "backup_pass", value, sizeof(value))) {
+        if (strcmp(cfg.backup_pass, value) != 0) {
+            backup_pass_changed = true;
+        }
+        copy_bounded(cfg.backup_pass, sizeof(cfg.backup_pass), value);
+        changed = true;
+    }
+    if (query_value_decoded(q, "prefer_backup_first", value, sizeof(value))) {
+        bool prefer_backup_first = (atoi(value) != 0);
+        if (cfg.prefer_backup_first != prefer_backup_first) {
+            prefer_network_changed = true;
+        }
+        cfg.prefer_backup_first = prefer_backup_first;
         changed = true;
     }
     if (query_value_decoded(q, "ota_url", value, sizeof(value))) {
@@ -447,11 +541,14 @@ static esp_err_t device_post(httpd_req_t *req) {
     storage_save_config(&cfg);
     ESP_LOGI(
         TAG,
-        "API /api/device saved (ap_ssid=%s, ap_pass=%s, home_ssid=%s, home_pass=%s, ota_url=%s)",
+        "API /api/device saved (ap_ssid=%s, ap_pass=%s, home_ssid=%s, home_pass=%s, backup_ssid=%s, backup_pass=%s, prefer_backup_first=%s, ota_url=%s)",
         ap_ssid_changed ? "changed" : "same",
         ap_pass_changed ? "changed" : "same",
         home_ssid_changed ? "changed" : "same",
         home_pass_changed ? "changed" : "same",
+        backup_ssid_changed ? "changed" : "same",
+        backup_pass_changed ? "changed" : "same",
+        prefer_network_changed ? "changed" : "same",
         ota_url_changed ? "changed" : "same"
     );
 
@@ -520,11 +617,11 @@ static esp_err_t ota_post(httpd_req_t *req) {
         storage_save_config(&cfg);
     }
 
-    if (!cfg.home_wifi_set || !cfg.home_ssid[0]) {
+    if (!cfg.home_wifi_set || (!cfg.home_ssid[0] && !cfg.backup_ssid[0])) {
         leds_signal_error();
-        ESP_LOGW(TAG, "OTA rejected: home Wi-Fi settings are required");
+        ESP_LOGW(TAG, "OTA rejected: at least one Wi-Fi network is required");
         httpd_resp_set_status(req, "400 Bad Request");
-        return send_json(req, "{\"ok\":false,\"error\":\"home_wifi_required\",\"message\":\"Home Wi-Fi settings are required for OTA\"}");
+        return send_json(req, "{\"ok\":false,\"error\":\"home_wifi_required\",\"message\":\"At least one Wi-Fi network is required for OTA\"}");
     }
 
     if (s_ota_sequence_running) {
@@ -542,8 +639,6 @@ static esp_err_t ota_post(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    copy_bounded(request->ssid, sizeof(request->ssid), cfg.home_ssid);
-    copy_bounded(request->password, sizeof(request->password), cfg.home_pass);
     copy_bounded(request->url, sizeof(request->url), cfg.ota_url);
     copy_bounded(request->current_version, sizeof(request->current_version), cfg.firmware_version);
 
@@ -604,17 +699,34 @@ static void ap_restart_task(void *arg) {
 }
 
 void web_server_stop_ap(void) {
+    bool had_server = (s_server != NULL);
+    bool had_ap = s_ap_running;
+    bool had_wifi_mode = false;
+
     if (s_server) {
         httpd_stop(s_server);
         s_server = NULL;
     }
 
-    if (s_ap_running) {
-        esp_wifi_stop();
-        esp_wifi_set_mode(WIFI_MODE_NULL);
-        s_ap_running = false;
-        app_state_set_wifi_ap_running(false);
-        ESP_LOGI(TAG, "Config AP stopped");
+    if (s_wifi_inited) {
+        wifi_mode_t mode = WIFI_MODE_NULL;
+        if (esp_wifi_get_mode(&mode) == ESP_OK && mode != WIFI_MODE_NULL) {
+            had_wifi_mode = true;
+            esp_wifi_stop();
+            esp_wifi_set_mode(WIFI_MODE_NULL);
+        }
+    }
+
+    s_ap_running = false;
+    s_sta_ip[0] = '\0';
+    app_state_set_wifi_ap_running(false);
+
+    if (had_ap) {
+        ESP_LOGI(TAG, "WiFi AP stopped");
+    } else if (had_wifi_mode) {
+        ESP_LOGI(TAG, "WiFi STA/AP stopped");
+    } else if (had_server) {
+        ESP_LOGI(TAG, "Web server stopped");
     }
 }
 
@@ -681,11 +793,31 @@ void web_server_start_ap(void) {
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_cfg));
     ESP_ERROR_CHECK(esp_wifi_start());
 
+    ESP_ERROR_CHECK(ensure_http_server_started());
+
+    s_ap_running = true;
+    app_state_set_wifi_ap_running(true);
+    touch_activity();
+    // Extra touch to ensure the activity timestamp is in the future before
+    // the main loop's first timeout check after AP starts.
+    vTaskDelay(pdMS_TO_TICKS(50));
+    touch_activity();
+    ESP_LOGI(TAG, "WiFi AP started: %s", s_ap_runtime_ssid);
+}
+
+static esp_err_t ensure_http_server_started(void) {
+    if (s_server) {
+        return ESP_OK;
+    }
+
     httpd_config_t server_cfg = HTTPD_DEFAULT_CONFIG();
     server_cfg.max_uri_handlers = 16;
     server_cfg.uri_match_fn = httpd_uri_match_wildcard;
     server_cfg.stack_size = 8192;
-    ESP_ERROR_CHECK(httpd_start(&s_server, &server_cfg));
+    esp_err_t err = httpd_start(&s_server, &server_cfg);
+    if (err != ESP_OK) {
+        return err;
+    }
 
     httpd_uri_t root = {.uri = "/", .method = HTTP_GET, .handler = root_get, .user_ctx = NULL};
     httpd_uri_t status = {.uri = "/api/status", .method = HTTP_GET, .handler = status_get, .user_ctx = NULL};
@@ -704,19 +836,53 @@ void web_server_start_ap(void) {
     httpd_register_uri_handler(s_server, &ota);
     httpd_register_uri_handler(s_server, &wifi_ap);
     httpd_register_uri_handler(s_server, &captive);
-
-    s_ap_running = true;
-    app_state_set_wifi_ap_running(true);
-    touch_activity();
-    // Extra touch to ensure the activity timestamp is in the future before
-    // the main loop's first timeout check after AP starts.
-    vTaskDelay(pdMS_TO_TICKS(50));
-    touch_activity();
-    ESP_LOGI(TAG, "Config AP started: %s", s_ap_runtime_ssid);
+    return ESP_OK;
 }
 
 bool web_server_ap_running(void) {
     return s_ap_running;
+}
+
+bool web_server_network_running(void) {
+    wifi_mode_t mode = WIFI_MODE_NULL;
+
+    if (!s_wifi_inited) {
+        return false;
+    }
+    if (esp_wifi_get_mode(&mode) != ESP_OK) {
+        return false;
+    }
+    return mode != WIFI_MODE_NULL;
+}
+
+bool web_server_start_preferred_network(void) {
+    device_config_t cfg;
+
+    app_state_get_config(&cfg);
+
+    // Start AP immediately if no saved STA credentials exist.
+    if (!cfg.home_ssid[0] && !cfg.backup_ssid[0]) {
+        ESP_LOGI(TAG, "No saved Wi-Fi networks; starting AP");
+        web_server_start_ap();
+        return true;
+    }
+
+    web_server_stop_ap();
+
+    if (connect_saved_wifi_ordered(&cfg, pdMS_TO_TICKS(10000))) {
+        if (ensure_http_server_started() != ESP_OK) {
+            ESP_LOGW(TAG, "Connected to Wi-Fi but failed to start HTTP server; falling back to AP");
+            web_server_start_ap();
+            return true;
+        }
+        app_state_set_wifi_ap_running(false);
+        ESP_LOGI(TAG, "Connected to saved Wi-Fi network; AP off, web server reachable at http://%s or http://%s", s_host_hint, s_sta_ip[0] ? s_sta_ip : "(ip pending)");
+        return false;
+    }
+
+    ESP_LOGW(TAG, "Could not connect to saved Wi-Fi networks; starting AP fallback");
+    web_server_start_ap();
+    return true;
 }
 
 void web_server_init(void) {
@@ -734,6 +900,7 @@ void web_server_init(void) {
         s_wifi_events = xEventGroupCreate();
         ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
         ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL));
+        build_mdns_hostname();
         s_wifi_inited = true;
     }
 

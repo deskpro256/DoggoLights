@@ -3,7 +3,7 @@
 Fresh-start firmware for ESP32-C3-WROOM-02 with:
 
 - Low-power lighting controller with three presets
-- Button gestures: single click (next preset), double click (config AP on/off), long press (power off)
+- Button gestures: single click (next preset), double click (Wifi AP on/off), long press (power off)
 - Captive configuration web server from SPIFFS (no inline HTML in C code)
 - OTA pull update endpoint (GitHub/raw URL or your own server)
 - UART RPC endpoint for production test board integration

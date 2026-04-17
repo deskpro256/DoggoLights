@@ -14,7 +14,8 @@ static void set_defaults(device_config_t *cfg) {
     memset(cfg, 0, sizeof(*cfg));
     snprintf(cfg->ap_ssid, sizeof(cfg->ap_ssid), "DoggoLights");
     cfg->ap_pass[0] = '\0';
-    snprintf(cfg->firmware_version, sizeof(cfg->firmware_version), "2.0.0");
+    cfg->prefer_backup_first = false;
+    snprintf(cfg->firmware_version, sizeof(cfg->firmware_version), "v2.0.0");
     snprintf(cfg->ota_url, sizeof(cfg->ota_url), "%s", DL_DEFAULT_OTA_URL);
     cfg->presets[0] = (preset_t){ .effect = EFFECT_STATIC, .hue1 = 0, .hue2 = 0 };
     cfg->presets[1] = (preset_t){ .effect = EFFECT_BREATHING, .hue1 = 120, .hue2 = 120 };
@@ -49,12 +50,22 @@ void storage_load_or_default(device_config_t *cfg) {
     read_str(nvs, "ap_pass", cfg->ap_pass, sizeof(cfg->ap_pass), cfg->ap_pass);
     read_str(nvs, "home_ssid", cfg->home_ssid, sizeof(cfg->home_ssid), "");
     read_str(nvs, "home_pass", cfg->home_pass, sizeof(cfg->home_pass), "");
+    read_str(nvs, "backup_ssid", cfg->backup_ssid, sizeof(cfg->backup_ssid), "");
+    read_str(nvs, "backup_pass", cfg->backup_pass, sizeof(cfg->backup_pass), "");
     read_str(nvs, "fw_ver", cfg->firmware_version, sizeof(cfg->firmware_version), cfg->firmware_version);
     read_str(nvs, "ota_url", cfg->ota_url, sizeof(cfg->ota_url), cfg->ota_url);
 
     uint8_t home_set = 0;
     if (nvs_get_u8(nvs, "home_set", &home_set) == ESP_OK) {
         cfg->home_wifi_set = home_set != 0;
+    }
+    uint8_t prefer_backup_first = 0;
+    if (nvs_get_u8(nvs, "prefer_bak_first", &prefer_backup_first) == ESP_OK) {
+        cfg->prefer_backup_first = (prefer_backup_first != 0);
+    }
+    // Keep behavior robust across schema changes: infer from configured SSIDs.
+    if (cfg->home_ssid[0] || cfg->backup_ssid[0]) {
+        cfg->home_wifi_set = true;
     }
 
     for (int i = 0; i < 3; ++i) {
@@ -88,9 +99,12 @@ void storage_save_config(const device_config_t *cfg) {
     ESP_ERROR_CHECK(nvs_set_str(nvs, "ap_pass", cfg->ap_pass));
     ESP_ERROR_CHECK(nvs_set_str(nvs, "home_ssid", cfg->home_ssid));
     ESP_ERROR_CHECK(nvs_set_str(nvs, "home_pass", cfg->home_pass));
+    ESP_ERROR_CHECK(nvs_set_str(nvs, "backup_ssid", cfg->backup_ssid));
+    ESP_ERROR_CHECK(nvs_set_str(nvs, "backup_pass", cfg->backup_pass));
     ESP_ERROR_CHECK(nvs_set_str(nvs, "fw_ver", cfg->firmware_version));
     ESP_ERROR_CHECK(nvs_set_str(nvs, "ota_url", cfg->ota_url));
     ESP_ERROR_CHECK(nvs_set_u8(nvs, "home_set", cfg->home_wifi_set ? 1 : 0));
+    ESP_ERROR_CHECK(nvs_set_u8(nvs, "prefer_bak_first", cfg->prefer_backup_first ? 1 : 0));
 
     for (int i = 0; i < 3; ++i) {
         char key_eff[8];

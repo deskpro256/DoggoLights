@@ -21,6 +21,9 @@ typedef struct {
     char ap_pass[65];
     char home_ssid[33];
     char home_pass[65];
+    char backup_ssid[33];
+    char backup_pass[65];
+    bool prefer_backup_first;
     char firmware_version[16];
     char ota_url[256];
     bool home_wifi_set;

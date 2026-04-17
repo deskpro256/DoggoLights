@@ -411,7 +411,7 @@
     </div>
     <div class="offline-banner" id="offlineBanner">
       <div class="offline-dot"></div>
-      <span>Device unreachable — the config AP may have timed out. Changes won't reach the device.</span>
+      <span>Device unreachable — the WiFi AP may have timed out. Changes won't reach the device.</span>
     </div>
 
     <div class="tabs">
@@ -495,14 +495,20 @@
     <div id="deviceView" class="view">
       <div class="section">
         <h3>Device Settings</h3>
+        <div class="row">
+          <div>Firmware: <strong id="fwVersionText">-</strong></div>
+        </div>
+        <div class="row">
+          <div>Network: <strong id="networkAddressText">AP mode (192.168.4.1)</strong></div>
+        </div>
 
         <div class="grid row">
           <div>
-            <label for="apSsid">Config AP Name</label>
+            <label for="apSsid">WiFi AP Name</label>
             <input id="apSsid" type="text" maxlength="32" placeholder="DoggoLights" oninput="markDeviceSettingsDirty()" />
           </div>
           <div>
-            <label for="apPass">Config AP Password</label>
+            <label for="apPass">WiFi AP Password</label>
             <div class="password-input-wrap">
               <input id="apPass" type="password" maxlength="64" placeholder="Leave blank for open AP" oninput="markDeviceSettingsDirty()" />
               <button type="button" class="password-toggle" id="apPassToggle" onclick="togglePasswordVisibility('apPass', 'apPassToggle')" title="Show password">👁</button>
@@ -510,25 +516,56 @@
           </div>
         </div>
 
-        <div class="grid row">
-          <div>
-            <label for="homeSsid">Home / Hotspot SSID</label>
-            <input id="homeSsid" type="text" maxlength="32" placeholder="Phone hotspot or home Wi-Fi" oninput="markDeviceSettingsDirty()" />
-          </div>
-          <div>
-            <label for="homePass">Home / Hotspot Password</label>
-            <div class="password-input-wrap">
-              <input id="homePass" type="password" maxlength="64" placeholder="Password" oninput="markDeviceSettingsDirty()" />
-              <button type="button" class="password-toggle" id="homePassToggle" onclick="togglePasswordVisibility('homePass', 'homePassToggle')" title="Show password">👁</button>
+        <details class="row">
+          <summary>Wi-Fi Networks</summary>
+          <div class="row" style="margin-top:10px;">
+            <div>
+              <label for="networkPriority">Preferred Network</label>
+              <select id="networkPriority" onchange="markDeviceSettingsDirty()">
+                <option value="0">Primary first, then Backup</option>
+                <option value="1">Backup first, then Primary</option>
+              </select>
             </div>
           </div>
-        </div>
+          <div class="grid row" style="margin-top:10px;">
+            <div>
+              <label for="homeSsid">Primary SSID (Home / Hotspot)</label>
+              <input id="homeSsid" type="text" maxlength="32" placeholder="Phone hotspot or home Wi-Fi" oninput="markDeviceSettingsDirty()" />
+            </div>
+            <div>
+              <label for="homePass">Primary Password</label>
+              <div class="password-input-wrap">
+                <input id="homePass" type="password" maxlength="64" placeholder="Password" oninput="markDeviceSettingsDirty()" />
+                <button type="button" class="password-toggle" id="homePassToggle" onclick="togglePasswordVisibility('homePass', 'homePassToggle')" title="Show password">👁</button>
+              </div>
+            </div>
+          </div>
 
-        <div class="grid row">
+          <details class="row" style="margin-top:8px;">
+            <summary>Backup Network (Optional)</summary>
+            <div class="grid row" style="margin-top:10px;">
+              <div>
+                <label for="backupSsid">Backup SSID</label>
+                <input id="backupSsid" type="text" maxlength="32" placeholder="Optional fallback network" oninput="markDeviceSettingsDirty()" />
+              </div>
+              <div>
+                <label for="backupPass">Backup Password</label>
+                <div class="password-input-wrap">
+                  <input id="backupPass" type="password" maxlength="64" placeholder="Password" oninput="markDeviceSettingsDirty()" />
+                  <button type="button" class="password-toggle" id="backupPassToggle" onclick="togglePasswordVisibility('backupPass', 'backupPassToggle')" title="Show password">👁</button>
+                </div>
+              </div>
+            </div>
+          </details>
+        </details>
+
+        <div class="row" style="margin-top:14px;">
           <button onclick="saveDeviceSettings()">Save Device Settings</button>
-          <button class="secondary" onclick="turnOffAp()">Turn Off Config AP</button>
         </div>
-        <div class="row">
+        <div class="row" style="margin-top:16px; padding-top:12px; border-top:1px solid #2a3140;">
+          <button class="secondary" onclick="turnOffAp()">Turn Off WiFi</button>
+        </div>
+        <div class="row" style="margin-top:10px;">
           <button class="danger" onclick="factoryResetDevice()">Factory Reset Device</button>
         </div>
         <div id="deviceMessage" class="message"></div>
@@ -537,9 +574,6 @@
       <div class="section" id="otaSection">
         <details>
           <summary>Firmware Update</summary>
-          <div class="row" style="margin-top:10px;">
-            <div>Current firmware: <strong id="fwVersionText">-</strong></div>
-          </div>
           <div class="row" style="margin-top:10px;">
             <button id="otaStartBtn" class="danger ota-btn" onclick="startOta()">Start OTA Update</button>
           </div>
@@ -785,12 +819,20 @@
       document.getElementById('deviceTitle').textContent = deviceName;
       document.getElementById('statusLine').textContent = `🔋 ${s.battery_percent}%`;
       document.getElementById('fwVersionText').textContent = s.firmware_version || '-';
+      const hostHint = s.hostname_hint || 'doggolights.local';
+      const staIp = s.sta_ip || '';
+      document.getElementById('networkAddressText').textContent = staIp
+        ? `${staIp} (${hostHint})`
+        : `AP mode (192.168.4.1) / ${hostHint}`;
       document.getElementById('otaStartBtn').classList.toggle('unavailable', !s.home_wifi_set);
       if (!state.deviceSettingsDirty) {
         document.getElementById('apSsid').value = s.ap_ssid || '';
         document.getElementById('homeSsid').value = s.home_ssid || '';
+        document.getElementById('backupSsid').value = s.backup_ssid || '';
+        document.getElementById('networkPriority').value = s.prefer_backup_first ? '1' : '0';
         document.getElementById('apPass').value = '';
         document.getElementById('homePass').value = '';
+        document.getElementById('backupPass').value = '';
       }
       if (!state.editorDirty) {
         document.getElementById('preset').value = String(s.active_preset || 0);
@@ -817,21 +859,56 @@
       }
 
       const apSsid = document.getElementById('apSsid').value.trim();
+      const homeSsid = document.getElementById('homeSsid').value.trim();
+      const backupSsid = document.getElementById('backupSsid').value.trim();
+      const homePass = document.getElementById('homePass').value;
+      const backupPass = document.getElementById('backupPass').value;
+      const preferBackupFirst = document.getElementById('networkPriority').value === '1';
+
       const currentApSsid = (state.status && state.status.ap_ssid) ? state.status.ap_ssid : '';
+      const currentHomeSsid = (state.status && state.status.home_ssid) ? state.status.home_ssid : '';
+      const currentBackupSsid = (state.status && state.status.backup_ssid) ? state.status.backup_ssid : '';
+      const currentPreferBackupFirst = !!(state.status && state.status.prefer_backup_first);
+
       const apSettingsChanged = (apSsid !== currentApSsid) || apPass.length > 0;
       if (apSettingsChanged) {
-        const proceed = confirm('Changing AP name/password will restart the Config AP and disconnect your current connection. Continue?');
+        const proceed = confirm('Changing AP name/password will restart the WiFi AP and disconnect your current connection. Continue?');
         if (!proceed) {
           return;
         }
       }
 
-      const params = new URLSearchParams({
-        ap_ssid: apSsid,
-        ap_pass: apPass,
-        home_ssid: document.getElementById('homeSsid').value.trim(),
-        home_pass: document.getElementById('homePass').value,
-      });
+      const params = new URLSearchParams();
+
+      if (apSsid !== currentApSsid) {
+        params.set('ap_ssid', apSsid);
+      }
+      if (homeSsid !== currentHomeSsid) {
+        params.set('home_ssid', homeSsid);
+      }
+      if (backupSsid !== currentBackupSsid) {
+        params.set('backup_ssid', backupSsid);
+      }
+      if (preferBackupFirst !== currentPreferBackupFirst) {
+        params.set('prefer_backup_first', preferBackupFirst ? '1' : '0');
+      }
+
+      // Password fields are intentionally blank on refresh; only send when user typed a new value.
+      if (apPass.length > 0) {
+        params.set('ap_pass', apPass);
+      }
+      if (homePass.length > 0) {
+        params.set('home_pass', homePass);
+      }
+      if (backupPass.length > 0) {
+        params.set('backup_pass', backupPass);
+      }
+
+      if (!params.toString()) {
+        setMessage('deviceMessage', 'No settings changed.', false);
+        state.deviceSettingsDirty = false;
+        return;
+      }
 
       try {
         await api(`/api/device?${params.toString()}`, { method: 'POST' });
@@ -853,7 +930,7 @@
 
     async function startOta() {
       if (!state.status || !state.status.home_wifi_set) {
-        setMessage('otaMessage', 'OTA unavailable: set and save Home / Hotspot SSID first.', true);
+        setMessage('otaMessage', 'OTA unavailable: set and save at least one Wi-Fi network first.', true);
         return;
       }
       if (!confirm('Start OTA update now? The device will leave AP mode, connect to the saved home Wi-Fi or hotspot, and reboot if the update succeeds.')) {
@@ -869,7 +946,7 @@
 
     async function turnOffAp() {
       await api('/api/wifi_ap?on=0', { method: 'POST' });
-      setMessage('deviceMessage', 'Config AP shutdown requested.', false);
+      setMessage('deviceMessage', 'WiFi AP shutdown requested.', false);
     }
 
     async function factoryResetDevice() {

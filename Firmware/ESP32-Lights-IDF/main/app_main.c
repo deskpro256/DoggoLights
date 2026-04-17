@@ -58,7 +58,7 @@ static void log_boot_info(void) {
     int bat_pct = battery_read_percent();
 
     ESP_LOGI(TAG, "========================================");
-    ESP_LOGI(TAG, "  DoggoLights IDF v%s", cfg.firmware_version);
+    ESP_LOGI(TAG, "  DoggoLights IDF %s", cfg.firmware_version);
     ESP_LOGI(TAG, "  MAC  : %02X:%02X:%02X:%02X:%02X:%02X",
              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     ESP_LOGI(TAG, "----------------------------------------");
@@ -67,7 +67,8 @@ static void log_boot_info(void) {
     ESP_LOGI(TAG, "----------------------------------------");
     ESP_LOGI(TAG, "  AP SSID  : %s", web_server_get_runtime_ap_ssid());
     ESP_LOGI(TAG, "  AP Pass  : %s", cfg.ap_pass[0] ? "(set)" : "(open)");
-    ESP_LOGI(TAG, "  Home WiFi: %s", cfg.home_wifi_set ? cfg.home_ssid : "(not configured)");
+    ESP_LOGI(TAG, "  Primary WiFi: %s", cfg.home_ssid[0] ? cfg.home_ssid : "(not configured)");
+    ESP_LOGI(TAG, "  Backup WiFi : %s", cfg.backup_ssid[0] ? cfg.backup_ssid : "(not configured)");
     ESP_LOGI(TAG, "----------------------------------------");
     for (int i = 0; i < 3; i++) {
         ESP_LOGI(TAG, "  Preset %d : effect=%-10s  hue1=%3d  hue2=%3d",
@@ -130,14 +131,14 @@ static void on_button(button_event_t event) {
             }
             break;
         case BUTTON_EVENT_DOUBLE:
-            if (web_server_ap_running()) {
-                ESP_LOGI(TAG, "Button DOUBLE: stopping Config AP");
+            if (web_server_network_running()) {
+                ESP_LOGI(TAG, "Button DOUBLE: stopping WiFi (AP/STA)");
                 web_server_stop_ap();
                 leds_signal_ap_status(false);
             } else {
-                ESP_LOGI(TAG, "Button DOUBLE: starting Config AP");
-                web_server_start_ap();
-                leds_signal_ap_status(true);
+                ESP_LOGI(TAG, "Button DOUBLE: starting preferred WiFi (saved networks first, AP fallback)");
+                bool ap_started = web_server_start_preferred_network();
+                leds_signal_ap_status(ap_started);
             }
             break;
         case BUTTON_EVENT_LONG:
