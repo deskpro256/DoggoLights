@@ -278,6 +278,7 @@ static void ota_sequence_task(void *arg) {
 
     if (!connect_saved_wifi_ordered(&cfg, pdMS_TO_TICKS(10000))) {
         ESP_LOGW(TAG, "OTA network connect failed: both primary and backup SSID attempts failed");
+        leds_set_ota_state(LEDS_OTA_STATE_FAILED);
         s_ota_sequence_running = false;
         web_server_start_ap();
         free(request);
@@ -294,6 +295,7 @@ static void ota_sequence_task(void *arg) {
             sizeof(latest_version),
             &has_update) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to resolve OTA target from %s", request->url);
+        leds_set_ota_state(LEDS_OTA_STATE_FAILED);
         s_ota_sequence_running = false;
         web_server_start_ap();
         free(request);
@@ -303,6 +305,7 @@ static void ota_sequence_task(void *arg) {
 
     if (!has_update) {
         ESP_LOGI(TAG, "OTA skipped: device already up to date (current=%s latest=%s)", request->current_version, latest_version);
+        leds_set_ota_state(LEDS_OTA_STATE_IDLE);
         s_ota_sequence_running = false;
         web_server_start_ap();
         free(request);
@@ -312,6 +315,7 @@ static void ota_sequence_task(void *arg) {
 
     if (ota_pull_start(resolved_url) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start OTA task");
+        leds_set_ota_state(LEDS_OTA_STATE_FAILED);
         s_ota_sequence_running = false;
         web_server_start_ap();
         free(request);
@@ -643,9 +647,11 @@ static esp_err_t ota_post(httpd_req_t *req) {
     copy_bounded(request->current_version, sizeof(request->current_version), cfg.firmware_version);
 
     s_ota_sequence_running = true;
+    leds_set_ota_state(LEDS_OTA_STATE_IN_PROGRESS);
     if (xTaskCreate(ota_sequence_task, "ota_sequence", 6144, request, 4, NULL) != pdPASS) {
         s_ota_sequence_running = false;
         free(request);
+        leds_set_ota_state(LEDS_OTA_STATE_FAILED);
         leds_signal_error();
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Could not start OTA sequence");
         return ESP_FAIL;

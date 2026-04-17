@@ -25,6 +25,7 @@ static int s_manual_led1_hue;
 static int s_manual_led2_hue;
 static volatile int s_ap_signal;
 static volatile int s_error_signal;
+static volatile leds_ota_state_t s_ota_state = LEDS_OTA_STATE_IDLE;
 
 static int invert_pwm(int value) {
     if (value < 0) value = 0;
@@ -119,6 +120,10 @@ void leds_signal_error(void) {
     s_error_signal = 1;
 }
 
+void leds_set_ota_state(leds_ota_state_t state) {
+    s_ota_state = state;
+}
+
 void leds_set_power(bool on) {
     s_power_on = on;
     if (!on) {
@@ -161,14 +166,55 @@ static void led_task(void *arg) {
     int breath = 0;
     int breath_dir = 1;
     int flip = 0;
+    int ota_anim_phase = 0;
+    leds_ota_state_t last_ota_state = LEDS_OTA_STATE_IDLE;
     const int breathing_cycle_ms = DL_BREATHING_INHALE_MS + DL_BREATHING_EXHALE_MS;
     const int breath_step = (190 * DL_LED_EFFECT_TICK_MS + (breathing_cycle_ms / 2)) / breathing_cycle_ms;
 
     while (1) {
         runtime_state_t st;
         device_config_t cfg;
+        leds_ota_state_t ota_state = s_ota_state;
         app_state_get_runtime(&st);
         app_state_get_config(&cfg);
+
+        if (ota_state != last_ota_state) {
+            ota_anim_phase = 0;
+            last_ota_state = ota_state;
+        }
+
+        if (ota_state == LEDS_OTA_STATE_IN_PROGRESS) {
+            // OTA animation: double blink fade (two soft cyan pulses, then pause).
+            int cycle = ota_anim_phase % 60;
+            int intensity = 0;
+            if (cycle < 10) {
+                intensity = (cycle * 255) / 10;
+            } else if (cycle < 20) {
+                intensity = ((20 - cycle) * 255) / 10;
+            } else if (cycle < 30) {
+                intensity = ((cycle - 20) * 255) / 10;
+            } else if (cycle < 40) {
+                intensity = ((40 - cycle) * 255) / 10;
+            }
+
+            rgb_t ota = {
+                .r = 0,
+                .g = (uint8_t)((intensity * 170) / 255),
+                .b = (uint8_t)intensity,
+            };
+            set_led_pair(ota, ota);
+            ota_anim_phase = (ota_anim_phase + 1) % 60;
+            vTaskDelay(pdMS_TO_TICKS(20));
+            continue;
+        }
+
+        if (ota_state == LEDS_OTA_STATE_SUCCESS) {
+            s_ota_state = LEDS_OTA_STATE_IDLE;
+            blink_color((rgb_t){0, 255, 0}, (rgb_t){0, 255, 0}, 3, 90);
+        } else if (ota_state == LEDS_OTA_STATE_FAILED) {
+            s_ota_state = LEDS_OTA_STATE_IDLE;
+            blink_color((rgb_t){255, 0, 0}, (rgb_t){255, 0, 0}, 3, 90);
+        }
 
         if (s_ap_signal != 0) {
             int signal = s_ap_signal;
