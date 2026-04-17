@@ -90,5 +90,5 @@ void button_init(button_event_cb_t cb) {
     };
     ESP_ERROR_CHECK(gpio_config(&cfg));
 
-    xTaskCreate(button_task, "button_task", 3072, NULL, 6, NULL);
+    xTaskCreate(button_task, "button_task", 6144, NULL, 6, NULL);
 }

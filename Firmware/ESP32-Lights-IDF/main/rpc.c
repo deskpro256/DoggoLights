@@ -270,5 +270,5 @@ void rpc_init(void) {
     s_mfg_unlocked = !s_mfg_passed;
 
     ESP_LOGI(TAG, "RPC ready on USB CDC console (locked=%s)", s_mfg_unlocked ? "false" : "true");
-    xTaskCreate(rpc_task, "rpc_task", 4096, NULL, 4, NULL);
+    xTaskCreate(rpc_task, "rpc_task", 6144, NULL, 4, NULL);
 }

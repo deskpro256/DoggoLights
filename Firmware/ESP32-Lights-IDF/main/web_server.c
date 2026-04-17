@@ -565,7 +565,7 @@ static esp_err_t device_post(httpd_req_t *req) {
     );
 
     if (ap_settings_changed && s_ap_running) {
-        if (xTaskCreate(ap_restart_task, "ap_restart", 4096, NULL, 4, NULL) != pdPASS) {
+        if (xTaskCreate(ap_restart_task, "ap_restart", 6144, NULL, 4, NULL) != pdPASS) {
             ESP_LOGW(TAG, "Could not start AP restart task after AP settings change");
         } else {
             ESP_LOGI(TAG, "AP settings changed. Restarting AP to apply new SSID/password.");
@@ -595,7 +595,7 @@ static esp_err_t factory_reset_post(httpd_req_t *req) {
     ESP_LOGW(TAG, "Factory reset applied. AP base restored and user credentials cleared.");
 
     if (ap_was_running) {
-        if (xTaskCreate(ap_restart_task, "ap_restart", 4096, NULL, 4, NULL) != pdPASS) {
+        if (xTaskCreate(ap_restart_task, "ap_restart", 6144, NULL, 4, NULL) != pdPASS) {
             ESP_LOGW(TAG, "Could not start AP restart task after factory reset");
         } else {
             ESP_LOGI(TAG, "Factory reset: restarting AP to apply default SSID/password");
@@ -762,7 +762,7 @@ static esp_err_t wifi_ap_post(httpd_req_t *req) {
         }
         toggle_req->on = want_on;
 
-        if (xTaskCreate(ap_toggle_task, "ap_toggle", 4096, toggle_req, 4, NULL) != pdPASS) {
+        if (xTaskCreate(ap_toggle_task, "ap_toggle", 6144, toggle_req, 4, NULL) != pdPASS) {
             free(toggle_req);
             httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Could not start AP toggle task");
             return ESP_FAIL;
