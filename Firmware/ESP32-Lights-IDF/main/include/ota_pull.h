@@ -6,6 +6,7 @@
 #include "esp_err.h"
 
 esp_err_t ota_pull_start(const char *url);
+bool ota_pull_is_running(void);
 
 // Resolve OTA target using an optional latest.txt manifest and compare versions.
 // If a newer version is available, out_has_update=true and out_bin_url is set.

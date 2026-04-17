@@ -19,6 +19,10 @@ static const char *TAG = "ota_pull";
 static bool s_running;
 static char s_url[256];
 
+bool ota_pull_is_running(void) {
+    return s_running;
+}
+
 static bool ends_with(const char *s, const char *suffix) {
     size_t ls;
     size_t le;
@@ -342,6 +346,7 @@ static void ota_task(void *arg) {
         leds_set_ota_state(LEDS_OTA_STATE_SUCCESS);
         ESP_LOGI(TAG, "OTA success, restarting");
         vTaskDelay(pdMS_TO_TICKS(800));
+        s_running = false;
         esp_restart();
     }
 

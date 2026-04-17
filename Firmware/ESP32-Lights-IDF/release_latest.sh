@@ -43,12 +43,21 @@ printf "%s\n" "$FW_VERSION" > "$VERSION_TXT"
 
 if [[ "$DO_BUILD" -eq 1 ]]; then
   echo "Building firmware with version $FW_VERSION ..."
-  (cd "$SCRIPT_DIR" && idf.py build)
+  (cd "$SCRIPT_DIR" && idf.py reconfigure build)
 fi
 
 if [[ ! -f "$SRC_BIN" ]]; then
   echo "Error: firmware binary not found at: $SRC_BIN"
   echo "Build may have failed."
+  exit 1
+fi
+
+BIN_VERSIONS="$(strings "$SRC_BIN" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true)"
+if ! grep -Fqx "$FW_VERSION" <<< "$BIN_VERSIONS"; then
+  echo "Error: built firmware binary does not contain expected version '$FW_VERSION'"
+  echo "Detected version strings in binary:"
+  echo "$BIN_VERSIONS" | head -n 5
+  echo "Refusing to publish stale firmware.bin"
   exit 1
 fi
 

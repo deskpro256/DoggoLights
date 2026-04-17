@@ -358,6 +358,10 @@
       color: #8ea095;
       border: 1px solid #3a4a42;
     }
+    .ota-btn:disabled {
+      opacity: 0.72;
+      cursor: not-allowed;
+    }
     .offline-banner {
       display: none;
       align-items: center;
@@ -594,6 +598,9 @@
       lastFlipMs: 0,
       editorDirty: false,
       deviceSettingsDirty: false,
+      otaSubmitting: false,
+      otaPending: false,
+      otaStartVersion: '',
     };
 
     const PREVIEW_BREATHING_MS = 1000;
@@ -602,6 +609,9 @@
     function setOffline(offline) {
       document.getElementById('offlineBanner').classList.toggle('visible', offline);
       document.querySelector('.card').classList.toggle('offline', offline);
+      if (offline && state.otaPending) {
+        setMessage('otaMessage', 'OTA is running on the device. Connection loss is expected while AP is off; reconnect after reboot.', false);
+      }
     }
 
     async function api(path, opts) {
@@ -640,6 +650,27 @@
       const el = document.getElementById(id);
       el.textContent = text || '';
       el.className = `message ${text ? (isError ? 'error' : 'ok') : ''}`;
+    }
+
+    function updateOtaButtonState() {
+      const btn = document.getElementById('otaStartBtn');
+      const hasWifi = !!(state.status && state.status.home_wifi_set);
+      const otaRunning = !!(state.status && state.status.ota_running);
+      const disabled = state.otaSubmitting || otaRunning || !hasWifi;
+
+      btn.disabled = disabled;
+      btn.classList.toggle('unavailable', disabled);
+
+      if (!hasWifi) {
+        btn.textContent = 'Start OTA Update';
+        return;
+      }
+
+      if (otaRunning || state.otaSubmitting) {
+        btn.textContent = 'OTA In Progress...';
+      } else {
+        btn.textContent = 'Start OTA Update';
+      }
     }
 
     function hsl(h, s, l) {
@@ -824,7 +855,24 @@
       document.getElementById('networkAddressText').textContent = staIp
         ? `${staIp} (${hostHint})`
         : `AP mode (192.168.4.1) / ${hostHint}`;
-      document.getElementById('otaStartBtn').classList.toggle('unavailable', !s.home_wifi_set);
+      updateOtaButtonState();
+
+      if (state.otaPending) {
+        if (s.ota_running) {
+          setMessage('otaMessage', 'OTA is in progress on the device...', false);
+        } else {
+          const previousVersion = state.otaStartVersion || '';
+          const currentVersion = s.firmware_version || '';
+          if (previousVersion && currentVersion && currentVersion !== previousVersion) {
+            setMessage('otaMessage', `OTA finished successfully. Firmware is now ${currentVersion}.`, false);
+          } else {
+            setMessage('otaMessage', 'OTA sequence ended, but firmware version did not change.', true);
+          }
+          state.otaPending = false;
+          state.otaStartVersion = '';
+        }
+      }
+
       if (!state.deviceSettingsDirty) {
         document.getElementById('apSsid').value = s.ap_ssid || '';
         document.getElementById('homeSsid').value = s.home_ssid || '';
@@ -929,18 +977,37 @@
     }
 
     async function startOta() {
+      const otaRunning = !!(state.status && state.status.ota_running);
       if (!state.status || !state.status.home_wifi_set) {
         setMessage('otaMessage', 'OTA unavailable: set and save at least one Wi-Fi network first.', true);
+        return;
+      }
+      if (otaRunning || state.otaSubmitting) {
+        setMessage('otaMessage', 'OTA is already running. Please wait.', true);
         return;
       }
       if (!confirm('Start OTA update now? The device will leave AP mode, connect to the saved home Wi-Fi or hotspot, and reboot if the update succeeds.')) {
         return;
       }
+
+      state.otaSubmitting = true;
+      updateOtaButtonState();
       try {
         await api('/api/ota', { method: 'POST' });
-        setMessage('otaMessage', 'OTA sequence started.', false);
+        state.otaPending = true;
+        state.otaStartVersion = (state.status && state.status.firmware_version) ? state.status.firmware_version : '';
+        setMessage('otaMessage', 'OTA sequence started. Device will leave AP mode while updating.', false);
+        await refresh();
       } catch (err) {
-        setMessage('otaMessage', `OTA failed: ${err.message || 'request failed'}`, true);
+        const msg = String(err && err.message ? err.message : 'request failed');
+        if (msg.includes('ota_already_running')) {
+          setMessage('otaMessage', 'OTA is already running. Please wait for it to finish.', true);
+        } else {
+          setMessage('otaMessage', `OTA failed: ${msg}`, true);
+        }
+      } finally {
+        state.otaSubmitting = false;
+        updateOtaButtonState();
       }
     }
 

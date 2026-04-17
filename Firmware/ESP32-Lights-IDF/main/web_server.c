@@ -51,6 +51,10 @@ typedef struct {
 static void ap_restart_task(void *arg);
 static esp_err_t ensure_http_server_started(void);
 
+static bool ota_is_busy(void) {
+    return s_ota_sequence_running || ota_pull_is_running();
+}
+
 static void build_mdns_hostname(void) {
     snprintf(s_mdns_hostname, sizeof(s_mdns_hostname), "doggolights");
     snprintf(s_host_hint, sizeof(s_host_hint), "doggolights.local");
@@ -323,6 +327,7 @@ static void ota_sequence_task(void *arg) {
         return;
     }
 
+    s_ota_sequence_running = false;
     free(request);
     vTaskDelete(NULL);
 }
@@ -380,10 +385,12 @@ static esp_err_t status_get(httpd_req_t *req) {
     );
 
     char json[1400];
+    bool ota_running = ota_is_busy();
+
     snprintf(
         json,
         sizeof(json),
-        "{\"battery_percent\":%d,\"active_preset\":%d,\"wifi_ap_running\":%s,\"firmware_version\":\"%s\",\"ota_url\":\"%s\",\"ap_ssid\":\"%s\",\"ap_runtime_ssid\":\"%s\",\"home_ssid\":\"%s\",\"backup_ssid\":\"%s\",\"prefer_backup_first\":%s,\"home_wifi_set\":%s,\"sta_ip\":\"%s\",\"hostname_hint\":\"%s\",\"presets\":%s}",
+        "{\"battery_percent\":%d,\"active_preset\":%d,\"wifi_ap_running\":%s,\"firmware_version\":\"%s\",\"ota_url\":\"%s\",\"ap_ssid\":\"%s\",\"ap_runtime_ssid\":\"%s\",\"home_ssid\":\"%s\",\"backup_ssid\":\"%s\",\"prefer_backup_first\":%s,\"home_wifi_set\":%s,\"ota_running\":%s,\"sta_ip\":\"%s\",\"hostname_hint\":\"%s\",\"presets\":%s}",
         st.battery_percent,
         st.active_preset,
         st.wifi_ap_running ? "true" : "false",
@@ -395,6 +402,7 @@ static esp_err_t status_get(httpd_req_t *req) {
         cfg.backup_ssid,
         cfg.prefer_backup_first ? "true" : "false",
         cfg.home_wifi_set ? "true" : "false",
+        ota_running ? "true" : "false",
         s_sta_ip,
         s_host_hint,
         presets
@@ -628,7 +636,7 @@ static esp_err_t ota_post(httpd_req_t *req) {
         return send_json(req, "{\"ok\":false,\"error\":\"home_wifi_required\",\"message\":\"At least one Wi-Fi network is required for OTA\"}");
     }
 
-    if (s_ota_sequence_running) {
+    if (ota_is_busy()) {
         leds_signal_error();
         httpd_resp_set_status(req, "409 Conflict");
         httpd_resp_set_type(req, "application/json");

@@ -60,7 +60,7 @@ void storage_load_or_default(device_config_t *cfg) {
         cfg->home_wifi_set = home_set != 0;
     }
     uint8_t prefer_backup_first = 0;
-    if (nvs_get_u8(nvs, "prefer_bak_first", &prefer_backup_first) == ESP_OK) {
+    if (nvs_get_u8(nvs, "pref_bak_first", &prefer_backup_first) == ESP_OK) {
         cfg->prefer_backup_first = (prefer_backup_first != 0);
     }
     // Keep behavior robust across schema changes: infer from configured SSIDs.
@@ -104,7 +104,7 @@ void storage_save_config(const device_config_t *cfg) {
     ESP_ERROR_CHECK(nvs_set_str(nvs, "fw_ver", cfg->firmware_version));
     ESP_ERROR_CHECK(nvs_set_str(nvs, "ota_url", cfg->ota_url));
     ESP_ERROR_CHECK(nvs_set_u8(nvs, "home_set", cfg->home_wifi_set ? 1 : 0));
-    ESP_ERROR_CHECK(nvs_set_u8(nvs, "prefer_bak_first", cfg->prefer_backup_first ? 1 : 0));
+    ESP_ERROR_CHECK(nvs_set_u8(nvs, "pref_bak_first", cfg->prefer_backup_first ? 1 : 0));
 
     for (int i = 0; i < 3; ++i) {
         char key_eff[8];
