@@ -566,16 +566,13 @@
         <div class="row" style="margin-top:14px;">
           <button onclick="saveDeviceSettings()">Save Device Settings</button>
         </div>
-        <div class="row" style="margin-top:16px; padding-top:12px; border-top:1px solid #2a3140;">
-          <button class="secondary" onclick="turnOffAp()">Turn Off WiFi</button>
-        </div>
         <div class="row" style="margin-top:10px;">
           <button class="danger" onclick="factoryResetDevice()">Factory Reset Device</button>
         </div>
         <div id="deviceMessage" class="message"></div>
       </div>
 
-      <div class="section" id="otaSection">
+      <div class="section" id="otaSection" style="display:none;">
         <details>
           <summary>Firmware Update</summary>
           <div class="row" style="margin-top:10px;">
@@ -653,10 +650,17 @@
     }
 
     function updateOtaButtonState() {
+      const section = document.getElementById('otaSection');
       const btn = document.getElementById('otaStartBtn');
       const hasWifi = !!(state.status && state.status.home_wifi_set);
       const otaRunning = !!(state.status && state.status.ota_running);
       const disabled = state.otaSubmitting || otaRunning || !hasWifi;
+
+      section.style.display = hasWifi ? '' : 'none';
+
+      if (!hasWifi) {
+        setMessage('otaMessage', 'Add and save at least one Wi-Fi network to enable OTA.', false);
+      }
 
       btn.disabled = disabled;
       btn.classList.toggle('unavailable', disabled);
@@ -1008,11 +1012,6 @@
         state.otaSubmitting = false;
         updateOtaButtonState();
       }
-    }
-
-    async function turnOffAp() {
-      await api('/api/wifi_ap?on=0', { method: 'POST' });
-      setMessage('deviceMessage', 'WiFi AP shutdown requested.', false);
     }
 
     async function factoryResetDevice() {

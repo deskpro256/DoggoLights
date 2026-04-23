@@ -136,7 +136,7 @@ static void on_button(button_event_t event) {
                 web_server_stop_ap();
                 leds_signal_ap_status(false);
             } else {
-                ESP_LOGI(TAG, "Button DOUBLE: starting preferred WiFi (saved networks first, AP fallback)");
+                ESP_LOGI(TAG, "Button DOUBLE: starting AP configuration mode");
                 bool ap_started = web_server_start_preferred_network();
                 leds_signal_ap_status(ap_started);
             }

@@ -1112,31 +1112,8 @@ bool web_server_network_running(void) {
 }
 
 bool web_server_start_preferred_network(void) {
-    device_config_t cfg;
-
-    app_state_get_config(&cfg);
-
-    // Start AP immediately if no saved STA credentials exist.
-    if (!cfg.home_ssid[0] && !cfg.backup_ssid[0]) {
-        ESP_LOGI(TAG, "No saved Wi-Fi networks; starting AP");
-        web_server_start_ap();
-        return true;
-    }
-
-    web_server_stop_ap();
-
-    if (connect_saved_wifi_ordered(&cfg, pdMS_TO_TICKS(10000))) {
-        if (ensure_http_server_started() != ESP_OK) {
-            ESP_LOGW(TAG, "Connected to Wi-Fi but failed to start HTTP server; falling back to AP");
-            web_server_start_ap();
-            return true;
-        }
-        app_state_set_wifi_ap_running(false);
-        ESP_LOGI(TAG, "Connected to saved Wi-Fi network; AP off, web server reachable at http://%s or http://%s", s_host_hint, s_sta_ip[0] ? s_sta_ip : "(ip pending)");
-        return false;
-    }
-
-    ESP_LOGW(TAG, "Could not connect to saved Wi-Fi networks; starting AP fallback");
+    // Configuration is AP-only; saved STA credentials are reserved for OTA.
+    ESP_LOGI(TAG, "Starting AP-only configuration mode");
     web_server_start_ap();
     return true;
 }
