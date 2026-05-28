@@ -1,3 +1,8 @@
 Firmware/Refs
 Hardware/Images
 build/
+.venv/
+__pycache__/
+*.log
+*.egg-info
+dist/

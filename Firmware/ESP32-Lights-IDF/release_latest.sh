@@ -63,13 +63,29 @@ fi
 
 cp -f "$SRC_BIN" "$DST_BIN"
 
+# Also produce a merged "factory" image that includes bootloader +
+# partition table + otadata + app, so the testing jig can flash a fresh
+# board at 0x0 without needing the IDF toolchain.
+FACTORY_BIN="$FIRMWARE_ROOT/latest/firmware-factory.bin"
+BUILD_DIR="$SCRIPT_DIR/build"
+echo "Merging factory image -> $FACTORY_BIN"
+python -m esptool --chip esp32c3 merge_bin \
+    --output "$FACTORY_BIN" \
+    --flash_mode dio --flash_size 4MB --flash_freq 80m \
+    0x0      "$BUILD_DIR/bootloader/bootloader.bin" \
+    0x8000   "$BUILD_DIR/partition_table/partition-table.bin" \
+    0xf000   "$BUILD_DIR/ota_data_initial.bin" \
+    0x20000  "$BUILD_DIR/doggo_lights.bin"
+
 cat > "$MANIFEST" <<EOF
 version=$VERSION
 url=$OTA_URL
+factory_url=https://raw.githubusercontent.com/deskpro256/DoggoLights/main/Firmware/latest/firmware-factory.bin
 EOF
 
 echo "Updated OTA artifacts:"
 echo "  Binary   : $DST_BIN"
+echo "  Factory  : $FACTORY_BIN"
 echo "  Firmware : $VERSION_TXT -> $FW_VERSION"
 echo "  Manifest : $MANIFEST"
 echo "  Version  : $VERSION"

@@ -1,0 +1,59 @@
+RPi 3B+ with a custom hat
+
+HAT stuff:
+https://www.mouser.com/pdfDocs/hat-plus-specification.pdf
+https://github.com/raspberrypi/hats
+https://github.com/raspberrypi/hats/blob/master/eeprom-format.md
+https://github.com/raspberrypi/hats/tree/master/eepromutils
+https://github.com/raspberrypi/utils/tree/master/eeptools
+https://github.com/raspberrypi/hats/blob/master/hat-board-mechanical.pdf
+
+Board functionality:
+Just for lols EEPROM for HAT data?
+Bed for PCB to sit in and align to pins
+Current sensing INA228 (I2C) Vbat > Rsense > DUT
+    - sleep
+    - idle current in mode (static, breathing, flipflop, rainbow)
+LED lux sense x2 (I2C) (red, green, blue)
+Button pressing tool with spring?
+WiFi connect and control?
+USB port to connect to rpi usb, maybe even power cycle and/or data too (software or hardware?)
+Boot & RST pin triggering before flash
+Power button for RPi on/off
+
+
+Testing jig software:
+Robot framework or just python+Flask+Vue?
+I've been using python with flask and Vue for our testing jigs ar work, so I might as well continue.
+When turned on, RPi software checks for latest firmware file on github, downloads, uses it cached.
+Put soldered PCB in jig bed, connect USB C.
+Software notices new device on /dev/ttyACM0
+I dont have barcode stickers for the devices with SN, just use mac last bits
+Reads MAC or somehow knows what device is there and displays it on the web ui
+if needed triggers the boot & rst pins to get device into fw download mode
+    hold rst & boot pins
+Flashes firmware.bin using esptool
+    flashing/erasing should be a standalone script that can be launched for repairs or testing
+    in the testing main software is used as module/class/import
+Connect and use RPC commands to test DUT
+LED test
+    without LEDs turned on, read ambient lux value
+    turn on each colour on each of the 2 LEDs (red/green/blue) check for big lux value change (thresholds min/+-)
+    while this is going on, current measurents can also be done for each colour, mode
+WiFi test
+    enable wifi AP on DUT, connect from RPi using nmcli
+    wifi AP is DoggoLight[MAC :6] Exapmple DoggoLightsD34D8EEF
+    use RPC and API to quickly test if responses are received
+    check RSSI and other useful wifi stuff that can be done with nmcli
+Button test
+    RPC command to wait for click
+    Works yes/no?
+If all tests are completed, save data, PASS/FAIL.
+Using RPC "lock" the device so after this step only I can use the RPC commands using the magic values
+Maybe some database style saving locally, that can be maybe hosted on truenas, simple.
+I have like 10 devices only, not planning on large quantities.
+
+After this step I can assemble the complete product.
+I dont have FCC or anything else.
+Maybe I can get some stickers made at work to use on the packaging,
+but the device is so small I dont want to put any stickers on it.

@@ -1,0 +1,22 @@
+[Unit]
+Description=DoggoLights testing jig (Flask + Vue)
+After=network-online.target NetworkManager.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=doggojig
+Group=doggojig
+SupplementaryGroups=gpio i2c dialout
+Environment=DOGGOJIG_CONFIG=/etc/doggojig/config.yaml
+WorkingDirectory=/var/lib/doggojig
+ExecStart=/opt/doggojig/venv/bin/doggojig
+Restart=on-failure
+RestartSec=3
+# Hardening (relaxed - we need /dev/ttyACM*, /dev/i2c-*, /dev/gpiomem).
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

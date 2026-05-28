@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "doggolights-jig"
+version = "0.1.0"
+description = "Automated end-of-line testing jig for DoggoLights PCBs"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Karlis" }]
+license = { text = "MIT" }
+dependencies = [
+    "Flask>=3.0",
+    "pyserial>=3.5",
+    "esptool>=4.7",
+    "requests>=2.31",
+    "pyyaml>=6.0",
+    "smbus2>=0.4",
+]
+
+# Hardware-only extras. On a dev machine just `pip install .`; on the Pi
+# `pip install .[pi]` so udev / GPIO bindings come along.
+[project.optional-dependencies]
+pi = [
+    "pyudev>=0.24",
+    "RPi.GPIO>=0.7",
+]
+dev = [
+    "pytest>=8",
+    "ruff>=0.4",
+]
+
+[project.scripts]
+doggojig          = "jig.cli:main"
+doggojig-flash    = "jig.cli:flash_main"
+doggojig-fetch    = "jig.cli:fetch_main"
+
+[project.urls]
+Source = "https://github.com/deskpro256/DoggoLights"
+
+[tool.setuptools.packages.find]
+include = ["jig*"]
+
+[tool.setuptools.package-data]
+"jig.web" = ["*.html", "*.js", "*.css"]
+"jig"    = ["default_config.yaml"]

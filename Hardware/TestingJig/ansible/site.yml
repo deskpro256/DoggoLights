@@ -1,0 +1,176 @@
+# DoggoLights testing jig provisioning.
+#
+# Usage:
+#   cd Hardware/TestingJig/ansible
+#   ansible-playbook -i inventory.ini site.yml --ask-become-pass
+#
+# Idempotent. Re-run any time to update the code, deps, or config.
+
+- name: Provision Raspberry Pi for DoggoLights testing jig
+  hosts: jig
+  become: true
+
+  vars:
+    jig_user:        doggojig
+    jig_home:        /var/lib/doggojig
+    install_root:    /opt/doggojig
+    venv_path:       /opt/doggojig/venv
+    src_path:        /opt/doggojig/src
+    config_dir:      /etc/doggojig
+    repo_url:        "https://github.com/deskpro256/DoggoLights.git"
+    repo_branch:     main
+    project_subdir:  Hardware/TestingJig
+
+  handlers:
+    - name: restart doggojig
+      ansible.builtin.systemd:
+        name: doggojig.service
+        state: restarted
+        daemon_reload: true
+
+    - name: reload udev
+      ansible.builtin.command: udevadm control --reload-rules
+      changed_when: true
+
+  tasks:
+    # --- 1. OS packages ---------------------------------------------------
+    - name: Install OS dependencies
+      ansible.builtin.apt:
+        name:
+          - git
+          - python3
+          - python3-venv
+          - python3-pip
+          - network-manager       # nmcli for wifi test step
+          - i2c-tools
+          - libsystemd-dev
+          - usbutils
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Enable I2C interface via raspi-config
+      ansible.builtin.command: raspi-config nonint do_i2c 0
+      register: raspi_i2c
+      changed_when: "'already' not in (raspi_i2c.stdout | default(''))"
+      failed_when: false   # raspi-config may not exist on non-Raspbian
+
+    # --- 2. Service user --------------------------------------------------
+    - name: Ensure jig group exists
+      ansible.builtin.group:
+        name: "{{ jig_user }}"
+        state: present
+
+    - name: Ensure jig user exists
+      ansible.builtin.user:
+        name: "{{ jig_user }}"
+        group: "{{ jig_user }}"
+        groups: [dialout, gpio, i2c]
+        append: true
+        shell: /usr/sbin/nologin
+        home: "{{ jig_home }}"
+        create_home: true
+        system: true
+
+    # --- 3. Source + venv -------------------------------------------------
+    - name: Create install root
+      ansible.builtin.file:
+        path: "{{ install_root }}"
+        state: directory
+        owner: "{{ jig_user }}"
+        group: "{{ jig_user }}"
+        mode: "0755"
+
+    - name: Clone / update DoggoLights repo
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ src_path }}"
+        version: "{{ repo_branch }}"
+        force: true
+      become_user: "{{ jig_user }}"
+      notify: restart doggojig
+
+    - name: Create venv
+      ansible.builtin.command: python3 -m venv {{ venv_path }}
+      args:
+        creates: "{{ venv_path }}/bin/python"
+      become_user: "{{ jig_user }}"
+
+    - name: Upgrade pip / setuptools / wheel
+      ansible.builtin.pip:
+        name: [pip, setuptools, wheel]
+        state: latest
+        virtualenv: "{{ venv_path }}"
+      become_user: "{{ jig_user }}"
+
+    - name: Install doggojig package (editable, with pi extras)
+      ansible.builtin.pip:
+        name: "."
+        chdir: "{{ src_path }}/{{ project_subdir }}"
+        editable: true
+        extra_args: "[pi]"
+        virtualenv: "{{ venv_path }}"
+      become_user: "{{ jig_user }}"
+      notify: restart doggojig
+
+    # --- 4. Config + state dirs ------------------------------------------
+    - name: Create config dir
+      ansible.builtin.file:
+        path: "{{ config_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Install default config (only if missing - never clobber)
+      ansible.builtin.copy:
+        src: "{{ src_path }}/{{ project_subdir }}/jig/default_config.yaml"
+        dest: "{{ config_dir }}/config.yaml"
+        remote_src: true
+        force: false
+        mode: "0644"
+      notify: restart doggojig
+
+    - name: Ensure state dirs exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ jig_user }}"
+        group: "{{ jig_user }}"
+        mode: "0755"
+      loop:
+        - "{{ jig_home }}"
+        - "{{ jig_home }}/firmware"
+
+    # --- 5. udev + systemd -----------------------------------------------
+    - name: Install udev rule for DUT USB
+      ansible.builtin.copy:
+        src: "{{ src_path }}/{{ project_subdir }}/deploy/99-doggojig.rules"
+        dest: /etc/udev/rules.d/99-doggojig.rules
+        remote_src: true
+        mode: "0644"
+      notify: reload udev
+
+    - name: Install systemd unit
+      ansible.builtin.copy:
+        src: "{{ src_path }}/{{ project_subdir }}/deploy/doggojig.service"
+        dest: /etc/systemd/system/doggojig.service
+        remote_src: true
+        mode: "0644"
+      notify: restart doggojig
+
+    - name: Enable + start doggojig service
+      ansible.builtin.systemd:
+        name: doggojig.service
+        enabled: true
+        state: started
+        daemon_reload: true
+
+    # --- 6. Convenience --------------------------------------------------
+    - name: Show service status
+      ansible.builtin.command: systemctl --no-pager status doggojig.service
+      register: svc_status
+      changed_when: false
+      failed_when: false
+
+    - name: Display status
+      ansible.builtin.debug:
+        var: svc_status.stdout_lines

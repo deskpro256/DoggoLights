@@ -1,0 +1,80 @@
+:root {
+  --bg: #101418;
+  --panel: #1a1f25;
+  --fg: #e6e8ea;
+  --muted: #8a8f96;
+  --accent: #4ea1ff;
+  --pass: #46c46e;
+  --fail: #e25555;
+  --running: #e6c64e;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #222;
+}
+header h1 { font-size: 1.15rem; margin: 0; flex: 1; }
+.pill {
+  padding: 0.2rem 0.8rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  background: #333;
+}
+.pill.pass    { background: var(--pass); color: #000; }
+.pill.fail    { background: var(--fail); }
+.pill.running { background: var(--running); color: #000; }
+
+section { padding: 1rem 1.5rem; }
+.controls { display: flex; gap: 1rem; align-items: center; }
+.controls button {
+  background: var(--accent); border: 0; padding: 0.5rem 1rem;
+  border-radius: 6px; color: white; cursor: pointer;
+}
+.controls button[disabled] { opacity: 0.4; cursor: not-allowed; }
+.err { color: var(--fail); }
+
+.dut-pill {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  background: var(--panel);
+  border-left: 4px solid #555;
+}
+.dut-pill.on  { border-left-color: var(--pass); }
+.dut-pill.off { border-left-color: #555; color: var(--muted); }
+
+.dut { display: flex; gap: 2rem; }
+.dut label { color: var(--muted); display: block; font-size: 0.75rem; }
+
+.steps ul { list-style: none; padding: 0; }
+.steps li {
+  display: grid; grid-template-columns: 8rem 6rem 1fr;
+  padding: 0.5rem; border-radius: 6px; background: var(--panel);
+  margin-bottom: 0.25rem;
+}
+.steps li.pass    { border-left: 4px solid var(--pass); }
+.steps li.fail    { border-left: 4px solid var(--fail); }
+.steps li.running { border-left: 4px solid var(--running); }
+.steps li.pending { opacity: 0.6; }
+
+.log pre {
+  background: var(--panel); padding: 1rem; border-radius: 6px;
+  max-height: 18rem; overflow: auto; font-size: 0.8rem;
+}
+
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 0.4rem 0.6rem; text-align: left; border-bottom: 1px solid #222; }
+tr.pass td { color: var(--pass); }
+tr.fail td { color: var(--fail); }

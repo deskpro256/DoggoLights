@@ -1,0 +1,57 @@
+# Packaged default configuration for the DoggoLights testing jig.
+# Override by creating /etc/doggojig/config.yaml (system-wide) or
+# ~/.config/doggojig/config.yaml (user) or ./config.yaml (cwd).
+
+firmware:
+  latest_manifest_url: "https://raw.githubusercontent.com/deskpro256/DoggoLights/main/Firmware/latest/latest.txt"
+  binary_url:          "https://raw.githubusercontent.com/deskpro256/DoggoLights/main/Firmware/latest/firmware.bin"
+  factory_url:         "https://raw.githubusercontent.com/deskpro256/DoggoLights/main/Firmware/latest/firmware-factory.bin"
+  cache_dir:           "/var/lib/doggojig/firmware"
+
+esptool:
+  chip:        "esp32c3"
+  baud:        921600
+  # Factory image is merged (bootloader + partition table + otadata + app)
+  # and must be flashed at 0x0.
+  flash_addr:  "0x0"
+  before:      "default_reset"
+  after:       "hard_reset"
+
+rpc:
+  baud:           115200
+  read_timeout_s: 2.0
+  unlock_token:   "doggo-mfg-2026"
+
+usb:
+  port_glob: "/dev/ttyACM*"
+
+gpio:
+  boot_pin:        17
+  reset_pin:       27
+  button_solenoid: 22
+  dut_power:       23
+
+i2c:
+  bus:            1
+  ina228_addr:    0x40
+  lux_sensor_1:   0x44
+  lux_sensor_2:   0x45
+
+thresholds:
+  ambient_lux_max:        30
+  lit_lux_min_delta:      150
+  sleep_current_ua_max:   200
+  idle_current_ma_max:    25
+  static_current_ma_max:  120
+
+wifi:
+  ap_ssid_prefix: "DoggoLights"
+  ap_password:    ""
+  nm_connection:  "doggolights-test"
+
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+database:
+  path: "/var/lib/doggojig/results.sqlite3"
